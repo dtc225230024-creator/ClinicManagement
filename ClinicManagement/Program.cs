@@ -38,10 +38,16 @@ namespace ClinicManagement
                 options.KnownProxies.Clear();
             });
 
-            var connectionString = BuildMySqlConnectionString(builder.Configuration);
+            var connectionString = BuildMySqlConnectionString(builder.Configuration, builder.Environment);
 
             builder.Services.AddDbContext<ClinicDbContext>(options =>
-                options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 0, 36))));
+                options.UseMySql(
+                    connectionString,
+                    new MySqlServerVersion(new Version(8, 0, 36)),
+                    mysqlOptions => mysqlOptions.EnableRetryOnFailure(
+                        maxRetryCount: 5,
+                        maxRetryDelay: TimeSpan.FromSeconds(10),
+                        errorNumbersToAdd: null)));
 
             builder.Services.AddSingleton<PasswordHashService>();
             builder.Services.AddSingleton<UserManualService>();
@@ -166,9 +172,15 @@ namespace ClinicManagement
                    accept.Contains("*/*", StringComparison.OrdinalIgnoreCase);
         }
 
-        private static string BuildMySqlConnectionString(IConfiguration configuration)
+        private static string BuildMySqlConnectionString(IConfiguration configuration, IWebHostEnvironment environment)
         {
-            var railwayUrl = configuration["MYSQL_URL"];
+            var railwayUrl = FirstConfiguredValue(
+                configuration,
+                "MYSQL_URL",
+                "DATABASE_URL",
+                "MYSQL_PRIVATE_URL",
+                "MYSQL_PUBLIC_URL");
+
             if (!string.IsNullOrWhiteSpace(railwayUrl) &&
                 Uri.TryCreate(railwayUrl, UriKind.Absolute, out var mysqlUri))
             {
@@ -192,8 +204,29 @@ namespace ClinicManagement
                     configuration["MYSQLDATABASE"] ?? string.Empty);
             }
 
+            if (IsHostedProduction(configuration, environment))
+            {
+                throw new InvalidOperationException(
+                    "Missing Railway MySQL configuration. In the web service Variables tab, add MYSQLHOST, MYSQLPORT, MYSQLUSER, MYSQLPASSWORD and MYSQLDATABASE from the MySQL service, or add MYSQL_URL.");
+            }
+
             return configuration.GetConnectionString("DefaultConnection")
                    ?? throw new InvalidOperationException("Missing MySQL connection configuration.");
+        }
+
+        private static string? FirstConfiguredValue(IConfiguration configuration, params string[] keys)
+        {
+            return keys
+                .Select(key => configuration[key])
+                .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
+        }
+
+        private static bool IsHostedProduction(IConfiguration configuration, IWebHostEnvironment environment)
+        {
+            return environment.IsProduction() ||
+                   !string.IsNullOrWhiteSpace(configuration["RAILWAY_ENVIRONMENT"]) ||
+                   !string.IsNullOrWhiteSpace(configuration["RAILWAY_PROJECT_ID"]) ||
+                   !string.IsNullOrWhiteSpace(configuration["RAILWAY_SERVICE_ID"]);
         }
 
         private static string BuildMySqlConnectionString(
