@@ -1,0 +1,74 @@
+@model ClinicManagement.ViewModels.AppointmentListItem
+@{
+    ViewData["Title"] = "Chi tiết lịch khám";
+}
+
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">Bác sĩ</p>
+        <h1>Lịch #@Model.Appointment.AppointmentId</h1>
+    </div>
+    <div class="action-stack">
+        <a class="btn btn-outline-primary" asp-action="MedicalRecord" asp-route-appointmentId="@Model.Appointment.AppointmentId">Nhập kết quả khám</a>
+        <a class="btn btn-outline-secondary" asp-action="Schedule">Quay lại</a>
+    </div>
+</section>
+
+<div class="detail-grid">
+    <section class="detail-panel">
+        <h2>Thông tin bệnh nhân</h2>
+        <dl>
+            <dt>Họ tên</dt>
+            <dd>@Model.Patient.FullName</dd>
+            <dt>Số điện thoại</dt>
+            <dd>@Model.Patient.Phone</dd>
+            <dt>Ngày sinh</dt>
+            <dd>@Model.Patient.DateOfBirth?.ToString("dd/MM/yyyy")</dd>
+            <dt>Giới tính</dt>
+            <dd>@Model.Patient.Gender</dd>
+            <dt>Địa chỉ</dt>
+            <dd>@Model.Patient.Address</dd>
+        </dl>
+    </section>
+
+    <section class="detail-panel">
+        <h2>Thông tin lịch khám</h2>
+        <dl>
+            <dt>Bác sĩ</dt>
+            <dd>@Model.Doctor.FullName</dd>
+            <dt>Chuyên khoa</dt>
+            <dd>@Model.Department.DepartmentName</dd>
+            <dt>Ngày khám</dt>
+            <dd>@Model.Appointment.AppointmentDate.ToString("dd/MM/yyyy")</dd>
+            <dt>Khung giờ</dt>
+            <dd>@Model.Appointment.TimeSlot</dd>
+            <dt>Lý do khám</dt>
+            <dd>@Model.Appointment.Reason</dd>
+            <dt>Trạng thái</dt>
+            <dd>@DisplayText.AppointmentStatus(Model.Appointment.Status)</dd>
+        </dl>
+    </section>
+</div>
+
+<section class="detail-panel wide-panel">
+    <h2>Hồ sơ khám hiện tại</h2>
+    @if (Model.MedicalRecord is null)
+    {
+        <p class="mb-0">Chưa có kết quả khám bệnh cho lịch hẹn này.</p>
+    }
+    else
+    {
+        <dl class="record-lines">
+            <dt>Triệu chứng</dt>
+            <dd>@Model.MedicalRecord.Symptoms</dd>
+            <dt>Chẩn đoán</dt>
+            <dd>@Model.MedicalRecord.Diagnosis</dd>
+            <dt>Kết quả khám</dt>
+            <dd>@Model.MedicalRecord.ExaminationResult</dd>
+            <dt>Ghi chú</dt>
+            <dd>@Model.MedicalRecord.Note</dd>
+            <dt>Cập nhật</dt>
+            <dd>@Model.MedicalRecord.CreatedAt.ToString("dd/MM/yyyy HH:mm")</dd>
+        </dl>
+    }
+</section>

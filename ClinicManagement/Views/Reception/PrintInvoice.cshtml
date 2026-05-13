@@ -1,0 +1,236 @@
+@model ClinicManagement.ViewModels.InvoicePrintViewModel
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hóa đơn @Model.InvoiceCode</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 24px;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #17202a;
+            background: #eef2f3;
+        }
+
+        .receipt-actions {
+            display: flex;
+            gap: 12px;
+            margin: 0 auto 16px;
+            max-width: 900px;
+        }
+
+        .receipt-actions a,
+        .receipt-actions button {
+            border: 1px solid #b8c8cc;
+            border-radius: 6px;
+            background: #fff;
+            color: #17202a;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 10px 14px;
+            text-decoration: none;
+        }
+
+        .receipt-card {
+            width: min(900px, 100%);
+            margin: 0 auto;
+            padding: 28px;
+            border: 1px solid #d7e2e6;
+            border-radius: 8px;
+            background: #fff;
+            box-sizing: border-box;
+        }
+
+        .receipt-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .receipt-head h1 {
+            margin: 0 0 8px;
+            font-size: 28px;
+        }
+
+        .receipt-head p,
+        .receipt-head small {
+            display: block;
+            margin: 4px 0;
+            color: #4f5b66;
+        }
+
+        .receipt-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .receipt-panel {
+            padding: 16px;
+            border: 1px solid #d7e2e6;
+            border-radius: 8px;
+            background: #fbfcfc;
+        }
+
+        .receipt-panel h2 {
+            margin: 0 0 12px;
+            font-size: 16px;
+        }
+
+        .receipt-panel dl {
+            display: grid;
+            grid-template-columns: 120px 1fr;
+            gap: 8px 12px;
+            margin: 0;
+        }
+
+        .receipt-panel dt {
+            color: #5b6670;
+            font-weight: 700;
+        }
+
+        .receipt-panel dd {
+            margin: 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+        }
+
+        th,
+        td {
+            border: 1px solid #d7e2e6;
+            padding: 10px 12px;
+            text-align: left;
+        }
+
+        th {
+            background: #f4f7f8;
+        }
+
+        tfoot th {
+            font-size: 16px;
+        }
+
+        .receipt-note {
+            margin-top: 20px;
+            color: #5b6670;
+            font-size: 14px;
+        }
+
+        @@media print {
+            body {
+                padding: 0;
+                background: #fff;
+            }
+
+            .receipt-actions {
+                display: none;
+            }
+
+            .receipt-card {
+                width: 100%;
+                margin: 0;
+                border: none;
+                border-radius: 0;
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="receipt-actions">
+        <a href="@Url.Action("Invoice", "Reception", new { appointmentId = Model.Appointment?.Appointment.AppointmentId })">Quay lại hóa đơn</a>
+        <button type="button" onclick="window.print()">In hóa đơn</button>
+    </div>
+
+    <article class="receipt-card">
+        <header class="receipt-head">
+            <div>
+                <h1>HÓA ĐƠN KHÁM BỆNH</h1>
+                <p>ClinicCare AI</p>
+                <small>Địa chỉ: 123 Nguyễn Huệ, Quận 1, TP.HCM</small>
+                <small>Điện thoại: 028 3822 8899</small>
+            </div>
+            <div>
+                <p><strong>Số hóa đơn:</strong> @Model.InvoiceCode</p>
+                <p><strong>Ngày lập:</strong> @Model.Invoice?.CreatedAt.ToString("dd/MM/yyyy HH:mm")</p>
+                <p><strong>In lúc:</strong> @Model.PrintedAt.ToString("dd/MM/yyyy HH:mm")</p>
+                <p><strong>Trạng thái:</strong> @(Model.Invoice?.PaymentStatus == ClinicManagement.Models.PaymentStatus.Paid ? "Đã thanh toán" : "Chưa thanh toán")</p>
+            </div>
+        </header>
+
+        <section class="receipt-grid">
+            <div class="receipt-panel">
+                <h2>Thông tin bệnh nhân</h2>
+                <dl>
+                    <dt>Họ tên</dt>
+                    <dd>@Model.Appointment?.Patient.FullName</dd>
+                    <dt>Số điện thoại</dt>
+                    <dd>@Model.Appointment?.Patient.Phone</dd>
+                    <dt>Ngày sinh</dt>
+                    <dd>@(Model.Appointment?.Patient.DateOfBirth?.ToString("dd/MM/yyyy") ?? "Chưa cập nhật")</dd>
+                    <dt>Địa chỉ</dt>
+                    <dd>@(Model.Appointment?.Patient.Address ?? "Chưa cập nhật")</dd>
+                </dl>
+            </div>
+            <div class="receipt-panel">
+                <h2>Thông tin lịch khám</h2>
+                <dl>
+                    <dt>Mã lịch</dt>
+                    <dd>#@Model.Appointment?.Appointment.AppointmentId</dd>
+                    <dt>Bác sĩ</dt>
+                    <dd>@Model.Appointment?.Doctor.FullName</dd>
+                    <dt>Chuyên khoa</dt>
+                    <dd>@Model.Appointment?.Department.DepartmentName</dd>
+                    <dt>Thời gian</dt>
+                    <dd>@Model.Appointment?.Appointment.AppointmentDate.ToString("dd/MM/yyyy") @Model.Appointment?.Appointment.TimeSlot</dd>
+                </dl>
+            </div>
+        </section>
+
+        <section>
+            <table>
+                <thead>
+                <tr>
+                    <th>Dịch vụ</th>
+                    <th>Số lượng</th>
+                    <th>Đơn giá</th>
+                    <th>Thành tiền</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var detail in Model.Details)
+                {
+                    <tr>
+                        <td>@detail.ServiceName</td>
+                        <td>@detail.Quantity</td>
+                        <td>@detail.UnitPrice.ToString("N0") đ</td>
+                        <td>@detail.LineTotal.ToString("N0") đ</td>
+                    </tr>
+                }
+                </tbody>
+                <tfoot>
+                <tr>
+                    <th colspan="3">Tổng cộng</th>
+                    <th>@Model.TotalAmount.ToString("N0") đ</th>
+                </tr>
+                </tfoot>
+            </table>
+        </section>
+
+        <p class="receipt-note">
+            Sử dụng chức năng in của trình duyệt để lưu hóa đơn thành PDF khi cần gửi cho bệnh nhân.
+        </p>
+    </article>
+</body>
+</html>

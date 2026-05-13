@@ -1,0 +1,78 @@
+@model ClinicManagement.ViewModels.RescheduleAppointmentViewModel
+@{
+    ViewData["Title"] = "Đổi lịch khám";
+}
+
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">Đổi lịch khám</p>
+        <h1>Lịch #@Model.AppointmentId</h1>
+    </div>
+    <a class="btn btn-outline-secondary" asp-action="Appointments">Quay lại</a>
+</section>
+
+<div class="summary-box">
+    <strong>@Model.Appointment?.Patient.FullName</strong>
+    <span>@Model.Appointment?.Doctor.FullName - @Model.Appointment?.Department.DepartmentName</span>
+    <span>Hiện tại: @Model.Appointment?.Appointment.AppointmentDate.ToString("dd/MM/yyyy") @Model.Appointment?.Appointment.TimeSlot</span>
+    <span>Lý do khám: @Model.Appointment?.Appointment.Reason</span>
+</div>
+
+<form asp-action="Reschedule" method="post" class="inline-form">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <input asp-for="AppointmentId" type="hidden" />
+    <input asp-for="DepartmentId" type="hidden" />
+    <input asp-for="SelectedSuggestionKey" type="hidden" />
+    <label class="form-label">
+        Ngày mong muốn
+        <input asp-for="DesiredDate" class="form-control" />
+    </label>
+    <button class="btn btn-outline-primary" name="command" value="suggest" type="submit">Gợi ý lịch trống</button>
+</form>
+
+<h2 class="section-title">Gợi ý đổi lịch phù hợp</h2>
+
+@if (!Model.AppointmentSuggestions.Any())
+{
+    <div class="empty-state">
+        <h2>Chưa có lịch phù hợp</h2>
+        <p>Hãy chọn ngày khác hoặc cập nhật lịch làm việc của bác sĩ.</p>
+    </div>
+}
+else
+{
+    <div class="suggestion-list">
+        @foreach (var suggestion in Model.AppointmentSuggestions)
+        {
+            <form asp-action="Reschedule" method="post" class="suggestion-row">
+                <input type="hidden" name="AppointmentId" value="@Model.AppointmentId" />
+                <input type="hidden" name="DepartmentId" value="@Model.DepartmentId" />
+                <input type="hidden" name="DesiredDate" value="@Model.DesiredDate.ToString("yyyy-MM-dd")" />
+                <input type="hidden" name="SelectedSuggestionKey" value="@suggestion.SuggestionKey" />
+                <div>
+                    <strong>@suggestion.DoctorName</strong>
+                    <span>@suggestion.DepartmentName</span>
+                </div>
+                <div>
+                    <strong>@suggestion.Date.ToString("dd/MM/yyyy")</strong>
+                    <span>@suggestion.TimeSlot</span>
+                </div>
+                <div>
+                    <strong>@suggestion.Score</strong>
+                    <span>Điểm phù hợp</span>
+                </div>
+                <button class="btn btn-primary btn-sm"
+                        name="command"
+                        value="save"
+                        type="submit"
+                        data-confirm-modal="true"
+                        data-confirm-title="Xác nhận đổi lịch?"
+                        data-confirm-message="Lịch #@Model.AppointmentId sẽ được đổi sang @suggestion.Date.ToString("dd/MM/yyyy") @suggestion.TimeSlot với bác sĩ @suggestion.DoctorName."
+                        data-confirm-text="Đổi lịch"
+                        data-confirm-style="primary">Chọn lịch này</button>
+            </form>
+        }
+    </div>
+}
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

@@ -1,0 +1,26 @@
+# Build output
+**/bin/
+**/obj/
+artifacts/
+
+# Local IDE/runtime files
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Codex/local working files
+.codex_tmp/
+yeu-cau/
+
+# Logs/backups/temp files
+*.log
+*.tmp
+*.bak
+*.bak-*
+
+# OS files
+Thumbs.db
+.DS_Store

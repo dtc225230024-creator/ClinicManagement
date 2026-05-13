@@ -1,0 +1,176 @@
+@model ClinicManagement.ViewModels.UserDirectoryViewModel
+@using ClinicManagement.Models
+@{
+    ViewData["Title"] = "Quản lý tài khoản";
+    var filterRouteValues = new Dictionary<string, string?>
+    {
+        ["q"] = Model.Query,
+        ["role"] = Model.Role?.ToString(),
+        ["status"] = Model.Status,
+        ["passwordState"] = Model.PasswordState,
+        ["sort"] = Model.Sort,
+        ["pageSize"] = Model.PageSize.ToString()
+    };
+    ClinicManagement.ViewModels.SortHeaderViewModel SortHeader(string label, string ascendingSort, string descendingSort) => new()
+    {
+        Label = label,
+        AscendingSort = ascendingSort,
+        DescendingSort = descendingSort,
+        CurrentSort = Model.Sort,
+        RouteValues = filterRouteValues
+    };
+    var pager = new ClinicManagement.ViewModels.PagerViewModel
+    {
+        Page = Model.Page,
+        TotalPages = Model.TotalPages,
+        TotalCount = Model.TotalCount,
+        StartItem = Model.StartItem,
+        EndItem = Model.EndItem,
+        Pages = Model.GetVisiblePages(),
+        RouteValues = new Dictionary<string, string?>(filterRouteValues)
+    };
+}
+
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">Quản trị viên</p>
+        <h1>Quản lý tài khoản người dùng</h1>
+    </div>
+    <a class="btn btn-primary" asp-action="EditUser">Thêm tài khoản</a>
+</section>
+
+@if (TempData["TemporaryPassword"] is string temporaryPassword)
+{
+    <div class="alert alert-warning" role="alert">
+        <strong>Mật khẩu tạm thời mới</strong>
+        <div>Tài khoản: <code>@TempData["TemporaryUsername"]</code></div>
+        <div>Mật khẩu tạm thời: <code>@temporaryPassword</code></div>
+        <div class="small mt-1">Mật khẩu này chỉ hiển thị sau thao tác tạo/reset. Người dùng sẽ bắt buộc đổi mật khẩu khi đăng nhập.</div>
+    </div>
+}
+
+<form method="get" class="filter-toolbar">
+    <input type="hidden" name="sort" value="@Model.Sort" />
+    <label class="form-label filter-field-wide">
+        Tìm kiếm
+        <input name="q" value="@Model.Query" class="form-control" placeholder="Username, vai trò, bác sĩ hoặc chuyên khoa" />
+    </label>
+    <label class="form-label">
+        Vai trò
+        <select name="role" class="form-select">
+            <option value="">Tất cả vai trò</option>
+            <option value="@UserRole.Admin" selected="@(Model.Role == UserRole.Admin ? "selected" : null)">Admin</option>
+            <option value="@UserRole.Receptionist" selected="@(Model.Role == UserRole.Receptionist ? "selected" : null)">Lễ tân</option>
+            <option value="@UserRole.Doctor" selected="@(Model.Role == UserRole.Doctor ? "selected" : null)">Bác sĩ</option>
+        </select>
+    </label>
+    <label class="form-label">
+        Trạng thái
+        <select name="status" class="form-select">
+            <option value="">Tất cả trạng thái</option>
+            <option value="active" selected="@(Model.Status == "active" ? "selected" : null)">Hoạt động</option>
+            <option value="inactive" selected="@(Model.Status == "inactive" ? "selected" : null)">Đã khóa</option>
+        </select>
+    </label>
+    <label class="form-label">
+        Mật khẩu
+        <select name="passwordState" class="form-select">
+            <option value="">Tất cả trạng thái</option>
+            <option value="temporary" selected="@(Model.PasswordState == "temporary" ? "selected" : null)">Tạm thời</option>
+            <option value="stable" selected="@(Model.PasswordState == "stable" ? "selected" : null)">Ổn định</option>
+        </select>
+    </label>
+    <label class="form-label">
+        Mỗi trang
+        <select name="pageSize" class="form-select">
+            @foreach (var option in Model.PageSizeOptions)
+            {
+                <option value="@option" selected="@(Model.PageSize == option ? "selected" : null)">@option bản ghi</option>
+            }
+        </select>
+    </label>
+    <div class="filter-actions">
+        <button class="btn btn-primary" type="submit">Áp dụng</button>
+        <a class="btn btn-outline-secondary" asp-action="Users">Bỏ lọc</a>
+    </div>
+</form>
+
+@if (!Model.Items.Any())
+{
+    <div class="empty-state">
+        <h1>Không có tài khoản phù hợp</h1>
+        <p>Thử thay đổi từ khóa, vai trò hoặc trạng thái để tìm nhanh hơn.</p>
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>@await Html.PartialAsync("_SortHeader", SortHeader("Tên đăng nhập", "username", "username_desc"))</th>
+                    <th>@await Html.PartialAsync("_SortHeader", SortHeader("Vai trò", "role", "role_desc"))</th>
+                    <th>Liên kết</th>
+                    <th>@await Html.PartialAsync("_SortHeader", SortHeader("Trạng thái", "status", "status_desc"))</th>
+                    <th>Mật khẩu</th>
+                    <th>@await Html.PartialAsync("_SortHeader", SortHeader("Ngày tạo", "created", "created_desc"))</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var item in Model.Items)
+            {
+                <tr>
+                    <td>@item.User.UserId</td>
+                    <td>@item.User.Username</td>
+                    <td>@DisplayText.UserRole(item.User.Role)</td>
+                    <td>
+                        @if (item.Doctor is null)
+                        {
+                            <span class="text-muted">Không liên kết</span>
+                        }
+                        else
+                        {
+                            <div>@item.Doctor.FullName</div>
+                            <div class="text-muted">@item.Department?.DepartmentName</div>
+                        }
+                    </td>
+                    <td><span class="badge @(item.User.IsActive ? "bg-success" : "bg-danger")">@(item.User.IsActive ? "Hoạt động" : "Đã khóa")</span></td>
+                    <td>
+                        <span class="badge @(item.User.MustChangePassword ? "bg-warning text-dark" : "bg-success")">
+                            @(item.User.MustChangePassword ? "Tạm thời - phải đổi" : "Ổn định")
+                        </span>
+                    </td>
+                    <td>@item.User.CreatedAt.ToString("dd/MM/yyyy")</td>
+                    <td class="text-end action-stack">
+                        <a class="btn btn-outline-primary btn-sm" asp-action="EditUser" asp-route-id="@item.User.UserId">Sửa</a>
+                        <form asp-action="ResetPassword" method="post" class="d-inline">
+                            <input type="hidden" name="id" value="@item.User.UserId" />
+                            <button class="btn btn-outline-secondary btn-sm"
+                                    type="submit"
+                                    data-confirm-modal="true"
+                                    data-confirm-title="Reset mật khẩu?"
+                                    data-confirm-message="Tài khoản @item.User.Username sẽ được cấp mật khẩu tạm thời ngẫu nhiên và buộc đổi mật khẩu ở lần đăng nhập tiếp theo."
+                                    data-confirm-text="Reset MK"
+                                    data-confirm-style="warning">Reset MK</button>
+                        </form>
+                        <form asp-action="ToggleUser" method="post" class="d-inline">
+                            <input type="hidden" name="id" value="@item.User.UserId" />
+                            <button class="btn btn-outline-warning btn-sm"
+                                    type="submit"
+                                    data-confirm-modal="true"
+                                    data-confirm-title="@(item.User.IsActive ? "Khóa tài khoản?" : "Mở tài khoản?")"
+                                    data-confirm-message="@(item.User.IsActive ? $"Tài khoản {item.User.Username} sẽ bị khóa và session đang dùng sẽ bị đẩy ra ở request tiếp theo." : $"Tài khoản {item.User.Username} sẽ được mở khóa để đăng nhập lại.")"
+                                    data-confirm-text="@(item.User.IsActive ? "Khóa" : "Mở")"
+                                    data-confirm-style="warning">@(item.User.IsActive ? "Khóa" : "Mở")</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+
+    <partial name="_ListPager" model="pager" />
+}

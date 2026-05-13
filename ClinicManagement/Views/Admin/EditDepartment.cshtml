@@ -1,0 +1,40 @@
+@model ClinicManagement.Models.Department
+@{
+    ViewData["Title"] = Model.DepartmentId == 0 ? "Thêm chuyên khoa" : "Cập nhật chuyên khoa";
+}
+
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">Chuyên khoa</p>
+        <h1>@ViewData["Title"]</h1>
+    </div>
+    <a class="btn btn-outline-secondary" asp-action="Departments">Quay lại</a>
+</section>
+
+<form asp-action="EditDepartment" method="post" class="form-grid">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <input asp-for="DepartmentId" type="hidden" />
+
+    <label class="form-label">
+        Tên chuyên khoa
+        <input asp-for="DepartmentName" class="form-control" />
+        <span asp-validation-for="DepartmentName" class="text-danger"></span>
+    </label>
+
+    <label class="form-label">
+        Mô tả
+        <textarea asp-for="Description" class="form-control" rows="4"></textarea>
+    </label>
+
+    <label class="form-check">
+        <input asp-for="IsActive" class="form-check-input" />
+        Đang hoạt động
+    </label>
+
+    <div class="form-actions">
+        <button class="btn btn-primary" type="submit">Lưu</button>
+        <a class="btn btn-outline-secondary" asp-action="Departments">Hủy</a>
+    </div>
+</form>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

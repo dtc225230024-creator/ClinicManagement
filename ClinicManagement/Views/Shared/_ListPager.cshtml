@@ -1,0 +1,42 @@
+@using Microsoft.AspNetCore.WebUtilities
+@model ClinicManagement.ViewModels.PagerViewModel
+@{
+    string BuildPageUrl(int targetPage)
+    {
+        var query = Model.RouteValues
+            .Where(x => !string.IsNullOrWhiteSpace(x.Value))
+            .ToDictionary(x => x.Key, x => x.Value, StringComparer.OrdinalIgnoreCase);
+
+        query["page"] = targetPage.ToString();
+        return QueryHelpers.AddQueryString(ViewContext.HttpContext.Request.Path, query);
+    }
+}
+
+@if (Model.TotalCount > 0)
+{
+    <div class="list-footer">
+        <p class="list-meta mb-0">Hiển thị @Model.StartItem-@Model.EndItem / @Model.TotalCount bản ghi</p>
+
+        @if (Model.TotalPages > 1)
+        {
+            <nav aria-label="Điều hướng phân trang">
+                <ul class="pagination pagination-sm mb-0 app-pagination">
+                    <li class="page-item @(Model.Page <= 1 ? "disabled" : string.Empty)">
+                        <a class="page-link" href="@(Model.Page <= 1 ? "#" : BuildPageUrl(Model.Page - 1))" tabindex="@(Model.Page <= 1 ? -1 : 0)">Trước</a>
+                    </li>
+
+                    @foreach (var visiblePage in Model.Pages)
+                    {
+                        <li class="page-item @(visiblePage == Model.Page ? "active" : string.Empty)">
+                            <a class="page-link" href="@BuildPageUrl(visiblePage)">@visiblePage</a>
+                        </li>
+                    }
+
+                    <li class="page-item @(Model.Page >= Model.TotalPages ? "disabled" : string.Empty)">
+                        <a class="page-link" href="@(Model.Page >= Model.TotalPages ? "#" : BuildPageUrl(Model.Page + 1))" tabindex="@(Model.Page >= Model.TotalPages ? -1 : 0)">Sau</a>
+                    </li>
+                </ul>
+            </nav>
+        }
+    </div>
+}

@@ -1,0 +1,41 @@
+@using Microsoft.AspNetCore.WebUtilities
+@model ClinicManagement.ViewModels.SortHeaderViewModel
+@{
+    var isAscending = string.Equals(Model.CurrentSort, Model.AscendingSort, StringComparison.OrdinalIgnoreCase);
+    var isDescending = string.Equals(Model.CurrentSort, Model.DescendingSort, StringComparison.OrdinalIgnoreCase);
+    var nextSort = isAscending
+        ? Model.DescendingSort
+        : isDescending
+            ? string.Empty
+            : Model.AscendingSort;
+
+    var query = Model.RouteValues
+        .Where(x => !string.IsNullOrWhiteSpace(x.Value))
+        .ToDictionary(x => x.Key, x => x.Value, StringComparer.OrdinalIgnoreCase);
+
+    if (string.IsNullOrWhiteSpace(nextSort))
+    {
+        query.Remove("sort");
+    }
+    else
+    {
+        query["sort"] = nextSort;
+    }
+
+    query.Remove("page");
+
+    var sortUrl = QueryHelpers.AddQueryString(ViewContext.HttpContext.Request.Path, query);
+    var sortStateText = isAscending ? "tăng dần" : isDescending ? "giảm dần" : "mặc định";
+    var sortStateClass = isAscending ? "is-ascending" : isDescending ? "is-descending" : "is-neutral";
+}
+
+<a class="sort-link @sortStateClass"
+   href="@sortUrl"
+   title="Sắp xếp @Model.Label (@sortStateText)"
+   aria-label="Sắp xếp @Model.Label (@sortStateText)">
+    <span>@Model.Label</span>
+    <span class="sort-icon" aria-hidden="true">
+        <span class="sort-icon-arrow sort-icon-arrow-up">&#9650;</span>
+        <span class="sort-icon-arrow sort-icon-arrow-down">&#9660;</span>
+    </span>
+</a>

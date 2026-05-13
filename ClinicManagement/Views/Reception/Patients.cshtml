@@ -1,0 +1,111 @@
+@model ClinicManagement.ViewModels.PatientDirectoryViewModel
+@{
+    ViewData["Title"] = "Bệnh nhân";
+    var filterRouteValues = new Dictionary<string, string?>
+    {
+        ["q"] = Model.Query,
+        ["gender"] = Model.Gender,
+        ["sort"] = Model.Sort,
+        ["pageSize"] = Model.PageSize.ToString()
+    };
+    ClinicManagement.ViewModels.SortHeaderViewModel SortHeader(string label, string ascendingSort, string descendingSort) => new()
+    {
+        Label = label,
+        AscendingSort = ascendingSort,
+        DescendingSort = descendingSort,
+        CurrentSort = Model.Sort,
+        RouteValues = filterRouteValues
+    };
+    var pager = new ClinicManagement.ViewModels.PagerViewModel
+    {
+        Page = Model.Page,
+        TotalPages = Model.TotalPages,
+        TotalCount = Model.TotalCount,
+        StartItem = Model.StartItem,
+        EndItem = Model.EndItem,
+        Pages = Model.GetVisiblePages(),
+        RouteValues = new Dictionary<string, string?>(filterRouteValues)
+    };
+}
+
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">Lễ tân</p>
+        <h1>Tra cứu hồ sơ bệnh nhân</h1>
+    </div>
+    <a class="btn btn-primary" asp-action="EditPatient">Tạo hồ sơ</a>
+</section>
+
+<form method="get" class="filter-toolbar compact">
+    <input type="hidden" name="sort" value="@Model.Sort" />
+    <label class="form-label filter-field-wide">
+        Tìm kiếm
+        <input name="q" value="@Model.Query" class="form-control" placeholder="Mã, tên hoặc số điện thoại bệnh nhân" />
+    </label>
+    <label class="form-label">
+        Giới tính
+        <select name="gender" class="form-select">
+            <option value="">Tất cả</option>
+            @foreach (var gender in Model.Genders)
+            {
+                <option value="@gender" selected="@(string.Equals(Model.Gender, gender, StringComparison.OrdinalIgnoreCase) ? "selected" : null)">@gender</option>
+            }
+        </select>
+    </label>
+    <label class="form-label">
+        Mỗi trang
+        <select name="pageSize" class="form-select">
+            @foreach (var option in Model.PageSizeOptions)
+            {
+                <option value="@option" selected="@(Model.PageSize == option ? "selected" : null)">@option bản ghi</option>
+            }
+        </select>
+    </label>
+    <div class="filter-actions">
+        <button class="btn btn-primary" type="submit">Áp dụng</button>
+        <a class="btn btn-outline-secondary" asp-action="Patients">Bỏ lọc</a>
+    </div>
+</form>
+
+@if (!Model.Items.Any())
+{
+    <div class="empty-state">
+        <h1>Không tìm thấy bệnh nhân phù hợp</h1>
+        <p>Hãy thử đổi từ khóa hoặc tạo hồ sơ mới cho bệnh nhân.</p>
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+            <tr>
+                <th>@await Html.PartialAsync("_SortHeader", SortHeader("Mã", "id", "id_desc"))</th>
+                <th>@await Html.PartialAsync("_SortHeader", SortHeader("Họ tên", "name", "name_desc"))</th>
+                <th>@await Html.PartialAsync("_SortHeader", SortHeader("Ngày sinh", "dob", "dob_desc"))</th>
+                <th>Giới tính</th>
+                <th>@await Html.PartialAsync("_SortHeader", SortHeader("Số điện thoại", "phone", "phone_desc"))</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (var patient in Model.Items)
+            {
+                <tr>
+                    <td>@patient.PatientId</td>
+                    <td>@patient.FullName</td>
+                    <td>@patient.DateOfBirth?.ToString("dd/MM/yyyy")</td>
+                    <td>@patient.Gender</td>
+                    <td>@patient.Phone</td>
+                    <td class="text-end action-stack">
+                        <a class="btn btn-outline-primary btn-sm" asp-action="EditPatient" asp-route-id="@patient.PatientId">Sửa</a>
+                        <a class="btn btn-outline-success btn-sm" asp-action="CreateAppointment" asp-route-patientId="@patient.PatientId">Đặt lịch</a>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+
+    <partial name="_ListPager" model="pager" />
+}

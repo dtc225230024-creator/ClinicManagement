@@ -1,0 +1,28 @@
+@model ClinicManagement.Models.DoctorProfile
+@{
+    ViewData["Title"] = Model.DoctorId == 0 ? "Thêm bác sĩ" : "Cập nhật bác sĩ";
+    var departments = (IEnumerable<ClinicManagement.Models.Department>)ViewBag.Departments;
+}
+
+<h1>@ViewData["Title"]</h1>
+<form asp-action="EditDoctor" method="post" class="form-grid">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <input asp-for="DoctorId" type="hidden" />
+    <label class="form-label">Họ tên<input asp-for="FullName" class="form-control" /></label>
+    <label class="form-label">Giới tính<input asp-for="Gender" class="form-control" /></label>
+    <label class="form-label">Số điện thoại<input asp-for="Phone" class="form-control" /></label>
+    <label class="form-label">Email<input asp-for="Email" class="form-control" /></label>
+    <label class="form-label">Chuyên khoa<select asp-for="DepartmentId" class="form-select">
+        @foreach (var department in departments)
+        {
+            <option value="@department.DepartmentId">@department.DepartmentName</option>
+        }
+    </select></label>
+    <label class="form-check"><input asp-for="IsActive" class="form-check-input" /> Đang hoạt động</label>
+    <div class="form-actions">
+        <button class="btn btn-primary" type="submit">Lưu</button>
+        <a class="btn btn-outline-secondary" asp-action="Doctors">Quay lại</a>
+    </div>
+</form>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

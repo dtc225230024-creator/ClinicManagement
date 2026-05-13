@@ -1,0 +1,196 @@
+@model ClinicManagement.ViewModels.AppointmentDirectoryViewModel
+@{
+    ViewData["Title"] = "Lịch khám";
+    var canManageReception = Model.CanManageReception;
+    var filterRouteValues = new Dictionary<string, string?>
+    {
+        ["q"] = Model.Query,
+        ["date"] = Model.Date?.ToString("yyyy-MM-dd"),
+        ["status"] = Model.Status?.ToString(),
+        ["departmentId"] = Model.DepartmentId?.ToString(),
+        ["sort"] = Model.Sort,
+        ["pageSize"] = Model.PageSize.ToString()
+    };
+    ClinicManagement.ViewModels.SortHeaderViewModel SortHeader(string label, string ascendingSort, string descendingSort) => new()
+    {
+        Label = label,
+        AscendingSort = ascendingSort,
+        DescendingSort = descendingSort,
+        CurrentSort = Model.Sort,
+        RouteValues = filterRouteValues
+    };
+    var pager = new ClinicManagement.ViewModels.PagerViewModel
+    {
+        Page = Model.Page,
+        TotalPages = Model.TotalPages,
+        TotalCount = Model.TotalCount,
+        StartItem = Model.StartItem,
+        EndItem = Model.EndItem,
+        Pages = Model.GetVisiblePages(),
+        RouteValues = new Dictionary<string, string?>(filterRouteValues)
+    };
+}
+
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">@(canManageReception ? "Lễ tân" : "Quản trị viên")</p>
+        <h1>@(canManageReception ? "Tra cứu, đổi lịch và xử lý thanh toán" : "Tra cứu lịch khám toàn hệ thống")</h1>
+    </div>
+    @if (canManageReception)
+    {
+        <a class="btn btn-primary" asp-action="CreateAppointment">Đặt lịch mới</a>
+    }
+</section>
+
+<form method="get" class="filter-toolbar">
+    <input type="hidden" name="sort" value="@Model.Sort" />
+    <label class="form-label filter-field-wide">
+        Tìm kiếm
+        <input name="q" value="@Model.Query" class="form-control" placeholder="Mã lịch, bệnh nhân, bác sĩ hoặc chuyên khoa" />
+    </label>
+    <label class="form-label">
+        Ngày khám
+        <input name="date" value="@Model.Date?.ToString("yyyy-MM-dd")" type="date" class="form-control" />
+    </label>
+    <label class="form-label">
+        Trạng thái
+        <select name="status" class="form-select">
+            <option value="">Tất cả trạng thái</option>
+            <option value="Scheduled" selected="@(Model.Status == ClinicManagement.Models.AppointmentStatus.Scheduled ? "selected" : null)">Đang chờ</option>
+            <option value="Completed" selected="@(Model.Status == ClinicManagement.Models.AppointmentStatus.Completed ? "selected" : null)">Hoàn tất</option>
+            <option value="Cancelled" selected="@(Model.Status == ClinicManagement.Models.AppointmentStatus.Cancelled ? "selected" : null)">Đã hủy</option>
+        </select>
+    </label>
+    <label class="form-label">
+        Chuyên khoa
+        <select name="departmentId" class="form-select">
+            <option value="">Tất cả chuyên khoa</option>
+            @foreach (var department in Model.Departments)
+            {
+                <option value="@department.DepartmentId" selected="@(Model.DepartmentId == department.DepartmentId ? "selected" : null)">@department.DepartmentName</option>
+            }
+        </select>
+    </label>
+    <label class="form-label">
+        Mỗi trang
+        <select name="pageSize" class="form-select">
+            @foreach (var option in Model.PageSizeOptions)
+            {
+                <option value="@option" selected="@(Model.PageSize == option ? "selected" : null)">@option bản ghi</option>
+            }
+        </select>
+    </label>
+    <div class="filter-actions">
+        <button class="btn btn-primary" type="submit">Áp dụng</button>
+        <a class="btn btn-outline-secondary" asp-action="Appointments">Bỏ lọc</a>
+    </div>
+</form>
+
+@if (!Model.Items.Any())
+{
+    <div class="empty-state">
+        <h1>Không có lịch khám phù hợp</h1>
+        <p>Hãy đổi ngày, trạng thái hoặc từ khóa tìm kiếm để xem danh sách phù hợp.</p>
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+            <tr>
+                <th>Mã</th>
+                <th>@await Html.PartialAsync("_SortHeader", SortHeader("Bệnh nhân", "patient", "patient_desc"))</th>
+                <th>@await Html.PartialAsync("_SortHeader", SortHeader("Bác sĩ", "doctor", "doctor_desc"))</th>
+                <th>Khoa</th>
+                <th>@await Html.PartialAsync("_SortHeader", SortHeader("Ngày", "date", "date_desc"))</th>
+                <th>Giờ</th>
+                <th>@await Html.PartialAsync("_SortHeader", SortHeader("Nhập kết quả lúc", "recorded", "recorded_desc"))</th>
+                <th>@await Html.PartialAsync("_SortHeader", SortHeader("Trạng thái", "status", "status_desc"))</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (var item in Model.Items)
+            {
+                <tr>
+                    <td>#@item.Appointment.AppointmentId</td>
+                    <td>@item.Patient.FullName</td>
+                    <td>@item.Doctor.FullName</td>
+                    <td>@item.Department.DepartmentName</td>
+                    <td>@item.Appointment.AppointmentDate.ToString("dd/MM/yyyy")</td>
+                    <td>@item.Appointment.TimeSlot</td>
+                    <td>
+                        @if (item.MedicalRecord is not null)
+                        {
+                            <span>@item.MedicalRecord.CreatedAt.ToString("dd/MM/yyyy HH:mm")</span>
+                        }
+                        else if (item.Appointment.Status == ClinicManagement.Models.AppointmentStatus.Completed)
+                        {
+                            <span class="text-muted">Chưa ghi nhận</span>
+                        }
+                        else if (item.Appointment.Status == ClinicManagement.Models.AppointmentStatus.Cancelled)
+                        {
+                            <span class="text-muted">Không áp dụng</span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">Chưa đến bước nhập</span>
+                        }
+                    </td>
+                    <td>
+                        <span class="badge @(item.Appointment.Status switch
+                        {
+                            ClinicManagement.Models.AppointmentStatus.Completed => "bg-success",
+                            ClinicManagement.Models.AppointmentStatus.Cancelled => "bg-secondary",
+                            _ => "bg-warning text-dark"
+                        })">
+                            @DisplayText.AppointmentStatus(item.Appointment.Status)
+                        </span>
+                    </td>
+                    <td class="text-end action-stack">
+                        @if (canManageReception && item.Appointment.Status == ClinicManagement.Models.AppointmentStatus.Scheduled)
+                        {
+                            <a class="btn btn-outline-primary btn-sm" asp-action="Reschedule" asp-route-id="@item.Appointment.AppointmentId">Đổi lịch</a>
+                        }
+
+                        @if (canManageReception && (item.Appointment.Status == ClinicManagement.Models.AppointmentStatus.Completed || item.Invoice is not null))
+                        {
+                            <a class="btn btn-outline-success btn-sm"
+                               asp-action="Invoice"
+                               asp-route-appointmentId="@item.Appointment.AppointmentId">
+                                @(item.Invoice?.PaymentStatus == ClinicManagement.Models.PaymentStatus.Paid ? "Hóa đơn" : "Thanh toán")
+                            </a>
+                        }
+
+                        @if (canManageReception && item.Invoice is not null)
+                        {
+                            <a class="btn btn-outline-secondary btn-sm"
+                               asp-action="PrintInvoice"
+                               asp-route-appointmentId="@item.Appointment.AppointmentId"
+                               target="_blank"
+                               rel="noopener">In</a>
+                        }
+
+                        @if (canManageReception && item.Appointment.Status == ClinicManagement.Models.AppointmentStatus.Scheduled && item.Invoice is null)
+                        {
+                            <form asp-action="CancelAppointment" method="post">
+                                <input type="hidden" name="id" value="@item.Appointment.AppointmentId" />
+                                <button class="btn btn-outline-danger btn-sm"
+                                        type="submit"
+                                        data-confirm-modal="true"
+                                        data-confirm-title="Hủy lịch khám?"
+                                        data-confirm-message="Lịch #@item.Appointment.AppointmentId của bệnh nhân @item.Patient.FullName sẽ bị hủy và không còn trong danh sách chờ khám."
+                                        data-confirm-text="Hủy lịch"
+                                        data-confirm-style="danger">Hủy</button>
+                            </form>
+                        }
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+
+    <partial name="_ListPager" model="pager" />
+}

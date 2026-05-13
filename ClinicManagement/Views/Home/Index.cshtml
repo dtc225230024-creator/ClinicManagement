@@ -1,0 +1,140 @@
+@model ClinicManagement.ViewModels.DashboardViewModel
+@{
+    ViewData["Title"] = "Tổng quan";
+    var actions = Model.Actions.ToList();
+    var primaryAction = actions.FirstOrDefault();
+    var quickActions = actions.Skip(1).ToList();
+    var appointments = Model.Appointments.ToList();
+}
+
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">@Model.Eyebrow</p>
+        <h1>@Model.Title</h1>
+        @if (!string.IsNullOrWhiteSpace(Model.Subtitle))
+        {
+            <p class="dashboard-subtitle">@Model.Subtitle</p>
+        }
+    </div>
+    @if (primaryAction is not null)
+    {
+        <a class="@primaryAction.ButtonClass"
+           asp-controller="@primaryAction.Controller"
+           asp-action="@primaryAction.Action">@primaryAction.Label</a>
+    }
+</section>
+
+<div class="stat-grid">
+    @foreach (var metric in Model.Metrics)
+    {
+        <article class="stat-card">
+            <span>@metric.Label</span>
+            <strong>@metric.Value</strong>
+            @if (!string.IsNullOrWhiteSpace(metric.Hint))
+            {
+                <small>@metric.Hint</small>
+            }
+        </article>
+    }
+</div>
+
+@if (quickActions.Any())
+{
+    <div class="dashboard-actions">
+        @foreach (var action in quickActions)
+        {
+            <a class="@action.ButtonClass"
+               asp-controller="@action.Controller"
+               asp-action="@action.Action">@action.Label</a>
+        }
+    </div>
+}
+
+<h2 class="section-title">@Model.AppointmentSectionTitle</h2>
+
+@if (appointments.Any())
+{
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+            <tr>
+                <th>Mã</th>
+                <th>Bệnh nhân</th>
+                @if (Model.ShowDoctorColumn)
+                {
+                    <th>Bác sĩ</th>
+                }
+                @if (Model.ShowDepartmentColumn)
+                {
+                    <th>Chuyên khoa</th>
+                }
+                <th>Ngày</th>
+                <th>Khung giờ</th>
+                @if (Model.ShowReasonColumn)
+                {
+                    <th>Lý do khám</th>
+                }
+                @if (Model.ShowStatusColumn)
+                {
+                    <th>Trạng thái</th>
+                }
+                @if (Model.ShowPaymentColumn)
+                {
+                    <th>Thanh toán</th>
+                }
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (var item in appointments)
+            {
+                <tr>
+                    <td>#@item.Appointment.AppointmentId</td>
+                    <td>@item.Patient.FullName</td>
+                    @if (Model.ShowDoctorColumn)
+                    {
+                        <td>@item.Doctor.FullName</td>
+                    }
+                    @if (Model.ShowDepartmentColumn)
+                    {
+                        <td>@item.Department.DepartmentName</td>
+                    }
+                    <td>@item.Appointment.AppointmentDate.ToString("dd/MM/yyyy")</td>
+                    <td>@item.Appointment.TimeSlot</td>
+                    @if (Model.ShowReasonColumn)
+                    {
+                        <td>@(string.IsNullOrWhiteSpace(item.Appointment.Reason) ? "Chưa cập nhật" : item.Appointment.Reason)</td>
+                    }
+                    @if (Model.ShowStatusColumn)
+                    {
+                        <td>@DisplayText.AppointmentStatus(item.Appointment.Status)</td>
+                    }
+                    @if (Model.ShowPaymentColumn)
+                    {
+                        <td>
+                            @if (item.Invoice?.PaymentStatus == ClinicManagement.Models.PaymentStatus.Paid)
+                            {
+                                <span>Đã thanh toán</span>
+                            }
+                            else if (item.Appointment.Status == ClinicManagement.Models.AppointmentStatus.Completed)
+                            {
+                                <span>Cần thanh toán</span>
+                            }
+                            else
+                            {
+                                <span>Chưa đến bước thanh toán</span>
+                            }
+                        </td>
+                    }
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+}
+else
+{
+    <section class="empty-state">
+        <h2>Chưa có dữ liệu cần xử lý</h2>
+        <p class="mb-0">@Model.EmptyMessage</p>
+    </section>
+}

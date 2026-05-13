@@ -1,0 +1,61 @@
+@model ClinicManagement.ViewModels.AppointmentListItem
+@{
+    ViewData["Title"] = "Chi tiết hồ sơ khám";
+    var record = Model.MedicalRecord;
+}
+
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">Hồ sơ khám bệnh</p>
+        <h1>Lịch #@Model.Appointment.AppointmentId</h1>
+    </div>
+    <a class="btn btn-outline-secondary" asp-action="Index">Quay lại</a>
+</section>
+
+<div class="detail-grid">
+    <section class="detail-panel">
+        <h2>Bệnh nhân</h2>
+        <dl>
+            <dt>Họ tên</dt>
+            <dd>@Model.Patient.FullName</dd>
+            <dt>Số điện thoại</dt>
+            <dd>@Model.Patient.Phone</dd>
+            <dt>Ngày sinh</dt>
+            <dd>@Model.Patient.DateOfBirth?.ToString("dd/MM/yyyy")</dd>
+            <dt>Giới tính</dt>
+            <dd>@Model.Patient.Gender</dd>
+            <dt>Địa chỉ</dt>
+            <dd>@Model.Patient.Address</dd>
+        </dl>
+    </section>
+
+    <section class="detail-panel">
+        <h2>Lịch khám</h2>
+        <dl>
+            <dt>Bác sĩ</dt>
+            <dd>@Model.Doctor.FullName</dd>
+            <dt>Chuyên khoa</dt>
+            <dd>@Model.Department.DepartmentName</dd>
+            <dt>Thời gian</dt>
+            <dd>@Model.Appointment.AppointmentDate.ToString("dd/MM/yyyy") @Model.Appointment.TimeSlot</dd>
+            <dt>Lý do khám</dt>
+            <dd>@Model.Appointment.Reason</dd>
+        </dl>
+    </section>
+</div>
+
+<section class="detail-panel wide-panel">
+    <h2>Kết quả khám</h2>
+    <dl class="record-lines">
+        <dt>Triệu chứng</dt>
+        <dd>@record?.Symptoms</dd>
+        <dt>Chẩn đoán</dt>
+        <dd>@record?.Diagnosis</dd>
+        <dt>Kết quả khám</dt>
+        <dd>@record?.ExaminationResult</dd>
+        <dt>Ghi chú</dt>
+        <dd>@record?.Note</dd>
+        <dt>Ngày tạo hồ sơ</dt>
+        <dd>@record?.CreatedAt.ToString("dd/MM/yyyy HH:mm")</dd>
+    </dl>
+</section>

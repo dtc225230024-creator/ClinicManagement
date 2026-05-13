@@ -1,0 +1,27 @@
+@model ClinicManagement.ViewModels.MedicalRecordViewModel
+@{
+    ViewData["Title"] = "Kết quả khám";
+}
+
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">Hồ sơ khám bệnh</p>
+        <h1>@Model.Appointment?.Patient.FullName</h1>
+    </div>
+    <a class="btn btn-outline-secondary" asp-action="Schedule">Quay lại</a>
+</section>
+
+<div class="summary-box">
+    <span>@Model.Appointment?.Appointment.AppointmentDate.ToString("dd/MM/yyyy") @Model.Appointment?.Appointment.TimeSlot</span>
+    <span>@Model.Appointment?.Doctor.FullName - @Model.Appointment?.Department.DepartmentName</span>
+</div>
+
+<form asp-action="MedicalRecord" method="post" class="form-grid wide">
+    <input asp-for="Record.RecordId" type="hidden" />
+    <input asp-for="Record.AppointmentId" type="hidden" />
+    <label class="form-label">Triệu chứng<textarea asp-for="Record.Symptoms" class="form-control" rows="3"></textarea></label>
+    <label class="form-label">Chẩn đoán<textarea asp-for="Record.Diagnosis" class="form-control" rows="3"></textarea></label>
+    <label class="form-label">Kết quả khám<textarea asp-for="Record.ExaminationResult" class="form-control" rows="4"></textarea></label>
+    <label class="form-label">Ghi chú<textarea asp-for="Record.Note" class="form-control" rows="3"></textarea></label>
+    <div class="form-actions"><button class="btn btn-primary" type="submit">Lưu hồ sơ</button></div>
+</form>

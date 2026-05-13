@@ -1,0 +1,86 @@
+@model ClinicManagement.ViewModels.LineChartViewModel
+@using System.Globalization
+@using System.Net
+@{
+    var points = Model.Points.ToList();
+    const decimal width = 640m;
+    const decimal height = 260m;
+    const decimal paddingLeft = 42m;
+    const decimal paddingRight = 18m;
+    const decimal paddingTop = 18m;
+    const decimal paddingBottom = 38m;
+    var plotWidth = width - paddingLeft - paddingRight;
+    var plotHeight = height - paddingTop - paddingBottom;
+    var maxValue = Math.Max(1m, points.Count == 0 ? 0m : points.Max(x => x.Value));
+    var xStep = points.Count <= 1 ? 0m : plotWidth / (points.Count - 1);
+
+    decimal GetX(int index) => paddingLeft + (index * xStep);
+    decimal GetY(decimal value) => paddingTop + (plotHeight - ((value / maxValue) * plotHeight));
+    string Svg(decimal value) => value.ToString("0.##", CultureInfo.InvariantCulture);
+
+    string BuildStrokePoints() =>
+        string.Join(" ", points.Select((point, index) => $"{Svg(GetX(index))},{Svg(GetY(point.Value))}"));
+
+    string BuildFillPoints()
+    {
+        if (points.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var segments = points
+            .Select((point, index) => $"{Svg(GetX(index))},{Svg(GetY(point.Value))}")
+            .ToList();
+
+        segments.Insert(0, $"{Svg(GetX(0))},{Svg(paddingTop + plotHeight)}");
+        segments.Add($"{Svg(GetX(points.Count - 1))},{Svg(paddingTop + plotHeight)}");
+        return string.Join(" ", segments);
+    }
+
+    var strokePoints = BuildStrokePoints();
+    var fillPoints = BuildFillPoints();
+    var labelStep = points.Count <= 6 ? 1 : (int)Math.Ceiling(points.Count / 6m);
+}
+
+<section class="line-chart-card">
+    <div>
+        <h3>@Model.Title</h3>
+        <p>@Model.Subtitle</p>
+    </div>
+
+    @if (!points.Any())
+    {
+        <div class="empty-state mb-0">
+            <h2>Chưa có dữ liệu</h2>
+            <p class="mb-0">Biểu đồ sẽ hiển thị khi có dữ liệu trong khoảng thời gian đang xem.</p>
+        </div>
+    }
+    else
+    {
+        <svg class="line-chart-svg" viewBox="0 0 @width @height" role="img" aria-label="@Model.Title">
+            <line class="line-chart-grid-line" x1="@Svg(paddingLeft)" y1="@Svg(paddingTop)" x2="@Svg(paddingLeft + plotWidth)" y2="@Svg(paddingTop)" />
+            <line class="line-chart-grid-line" x1="@Svg(paddingLeft)" y1="@Svg(paddingTop + (plotHeight / 2m))" x2="@Svg(paddingLeft + plotWidth)" y2="@Svg(paddingTop + (plotHeight / 2m))" />
+            <line class="line-chart-axis" x1="@Svg(paddingLeft)" y1="@Svg(paddingTop + plotHeight)" x2="@Svg(paddingLeft + plotWidth)" y2="@Svg(paddingTop + plotHeight)" />
+            <line class="line-chart-axis" x1="@Svg(paddingLeft)" y1="@Svg(paddingTop)" x2="@Svg(paddingLeft)" y2="@Svg(paddingTop + plotHeight)" />
+
+            <text class="line-chart-axis-label" x="8" y="@Svg(paddingTop + 4)">@Model.MaxLabel</text>
+            <text class="line-chart-axis-label" x="8" y="@Svg(paddingTop + (plotHeight / 2m) + 4)">@Model.MidLabel</text>
+            <text class="line-chart-axis-label" x="16" y="@Svg(paddingTop + plotHeight)">@Model.MinLabel</text>
+
+            <polygon class="line-chart-fill" points="@fillPoints" fill="@Model.FillColor"></polygon>
+            <polyline class="line-chart-stroke" points="@strokePoints" stroke="@Model.StrokeColor"></polyline>
+
+            @foreach (var pair in points.Select((point, index) => new { point, index }))
+            {
+                <circle class="line-chart-dot" cx="@Svg(GetX(pair.index))" cy="@Svg(GetY(pair.point.Value))" r="4" fill="@Model.StrokeColor">
+                    <title>@pair.point.Tooltip</title>
+                </circle>
+
+                @if (pair.index == 0 || pair.index == points.Count - 1 || pair.index % labelStep == 0)
+                {
+                    @Html.Raw($"<text class=\"line-chart-point-label\" x=\"{Svg(GetX(pair.index))}\" y=\"{Svg(paddingTop + plotHeight + 22)}\" text-anchor=\"middle\">{WebUtility.HtmlEncode(pair.point.Label)}</text>")
+                }
+            }
+        </svg>
+    }
+</section>

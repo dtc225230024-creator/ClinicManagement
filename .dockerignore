@@ -1,0 +1,17 @@
+.codex_tmp/
+.vs/
+artifacts/
+yeu-cau/
+Database/
+scripts/
+
+**/bin/
+**/obj/
+**/.user
+**/*.suo
+**/*.userosscache
+**/*.sln.docstates
+
+*.bak
+*.log
+*.tmp

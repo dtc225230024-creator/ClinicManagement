@@ -1,0 +1,135 @@
+@model ClinicManagement.ViewModels.AiSymptomRuleDirectoryViewModel
+@{
+    ViewData["Title"] = "Quản lý luật AI";
+    var filterRouteValues = new Dictionary<string, string?>
+    {
+        ["q"] = Model.Query,
+        ["departmentId"] = Model.DepartmentId?.ToString(),
+        ["status"] = Model.Status,
+        ["sort"] = Model.Sort,
+        ["pageSize"] = Model.PageSize.ToString()
+    };
+    ClinicManagement.ViewModels.SortHeaderViewModel SortHeader(string label, string ascendingSort, string descendingSort) => new()
+    {
+        Label = label,
+        AscendingSort = ascendingSort,
+        DescendingSort = descendingSort,
+        CurrentSort = Model.Sort,
+        RouteValues = filterRouteValues
+    };
+    var pager = new ClinicManagement.ViewModels.PagerViewModel
+    {
+        Page = Model.Page,
+        TotalPages = Model.TotalPages,
+        TotalCount = Model.TotalCount,
+        StartItem = Model.StartItem,
+        EndItem = Model.EndItem,
+        Pages = Model.GetVisiblePages(),
+        RouteValues = new Dictionary<string, string?>(filterRouteValues)
+    };
+}
+
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">Quản trị viên</p>
+        <h1>Quản lý luật gợi ý AI</h1>
+    </div>
+    <a class="btn btn-primary" asp-action="EditAiRule">Thêm luật AI</a>
+</section>
+
+<form method="get" class="filter-toolbar compact">
+    <input type="hidden" name="sort" value="@Model.Sort" />
+    <label class="form-label filter-field-wide">
+        Tìm kiếm
+        <input name="q" value="@Model.Query" class="form-control" placeholder="Cụm triệu chứng, mã luật hoặc chuyên khoa" />
+    </label>
+    <label class="form-label">
+        Chuyên khoa
+        <select name="departmentId" class="form-select">
+            <option value="">Tất cả chuyên khoa</option>
+            @foreach (var department in Model.Departments)
+            {
+                <option value="@department.DepartmentId" selected="@(Model.DepartmentId == department.DepartmentId ? "selected" : null)">@department.DepartmentName</option>
+            }
+        </select>
+    </label>
+    <label class="form-label">
+        Trạng thái
+        <select name="status" class="form-select">
+            <option value="">Tất cả trạng thái</option>
+            <option value="active" selected="@(Model.Status == "active" ? "selected" : null)">Đang dùng</option>
+            <option value="inactive" selected="@(Model.Status == "inactive" ? "selected" : null)">Tạm tắt</option>
+        </select>
+    </label>
+    <label class="form-label">
+        Mỗi trang
+        <select name="pageSize" class="form-select">
+            @foreach (var option in Model.PageSizeOptions)
+            {
+                <option value="@option" selected="@(Model.PageSize == option ? "selected" : null)">@option bản ghi</option>
+            }
+        </select>
+    </label>
+    <div class="filter-actions">
+        <button class="btn btn-primary" type="submit">Áp dụng</button>
+        <a class="btn btn-outline-secondary" asp-action="AiRules">Bỏ lọc</a>
+    </div>
+</form>
+
+@if (!Model.Items.Any())
+{
+    <div class="empty-state">
+        <h1>Không có luật AI phù hợp</h1>
+        <p>Danh sách sẽ hiển thị sau khi có dữ liệu trùng với bộ lọc hiện tại.</p>
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+            <tr>
+                <th>Mã</th>
+                <th>@await Html.PartialAsync("_SortHeader", SortHeader("Chuyên khoa", "department", "department_desc"))</th>
+                <th>@await Html.PartialAsync("_SortHeader", SortHeader("Cụm triệu chứng", "term", "term_desc"))</th>
+                <th>Chuẩn hóa</th>
+                <th>@await Html.PartialAsync("_SortHeader", SortHeader("Điểm", "score", "score_desc"))</th>
+                <th>@await Html.PartialAsync("_SortHeader", SortHeader("Trạng thái", "status", "status_desc"))</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (var item in Model.Items)
+            {
+                <tr>
+                    <td>@item.Rule.AiSymptomRuleId</td>
+                    <td>@item.Department.DepartmentName</td>
+                    <td>@item.Rule.Term</td>
+                    <td class="text-muted">@item.Rule.NormalizedTerm</td>
+                    <td>@item.Rule.Score</td>
+                    <td>
+                        <span class="badge @(item.Rule.IsActive ? "bg-success" : "bg-secondary")">
+                            @(item.Rule.IsActive ? "Đang dùng" : "Tạm tắt")
+                        </span>
+                    </td>
+                    <td class="text-end action-stack">
+                        <a class="btn btn-outline-primary btn-sm" asp-action="EditAiRule" asp-route-id="@item.Rule.AiSymptomRuleId">Sửa</a>
+                        <form asp-action="ToggleAiRule" method="post" class="d-inline">
+                            <input type="hidden" name="id" value="@item.Rule.AiSymptomRuleId" />
+                            <button class="btn btn-outline-warning btn-sm"
+                                    type="submit"
+                                    data-confirm-modal="true"
+                                    data-confirm-title="@(item.Rule.IsActive ? "Tắt luật AI?" : "Bật lại luật AI?")"
+                                    data-confirm-message="@(item.Rule.IsActive ? $"Cụm '{item.Rule.Term}' sẽ không còn được dùng để gợi ý." : $"Cụm '{item.Rule.Term}' sẽ được dùng lại để gợi ý.")"
+                                    data-confirm-text="@(item.Rule.IsActive ? "Tắt" : "Bật")"
+                                    data-confirm-style="warning">@(item.Rule.IsActive ? "Tắt" : "Bật")</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+
+    <partial name="_ListPager" model="pager" />
+}

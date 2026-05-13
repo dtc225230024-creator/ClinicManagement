@@ -1,0 +1,148 @@
+@model ClinicManagement.ViewModels.MedicalHistoryViewModel
+@{
+    ViewData["Title"] = "Lịch sử khám bệnh";
+    var filterRouteValues = new Dictionary<string, string?>
+    {
+        ["q"] = Model.Query,
+        ["fromDate"] = Model.FromDate?.ToString("yyyy-MM-dd"),
+        ["toDate"] = Model.ToDate?.ToString("yyyy-MM-dd"),
+        ["doctorId"] = Model.DoctorId?.ToString(),
+        ["departmentId"] = Model.DepartmentId?.ToString(),
+        ["sort"] = Model.Sort,
+        ["pageSize"] = Model.PageSize.ToString()
+    };
+    ClinicManagement.ViewModels.SortHeaderViewModel SortHeader(string label, string ascendingSort, string descendingSort) => new()
+    {
+        Label = label,
+        AscendingSort = ascendingSort,
+        DescendingSort = descendingSort,
+        CurrentSort = Model.Sort,
+        RouteValues = filterRouteValues
+    };
+    var pager = new ClinicManagement.ViewModels.PagerViewModel
+    {
+        Page = Model.Page,
+        TotalPages = Model.TotalPages,
+        TotalCount = Model.TotalCount,
+        StartItem = Model.StartItem,
+        EndItem = Model.EndItem,
+        Pages = Model.GetVisiblePages(),
+        RouteValues = new Dictionary<string, string?>(filterRouteValues)
+    };
+}
+
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">Hồ sơ bệnh nhân</p>
+        <h1>Tra cứu lịch sử khám bệnh</h1>
+    </div>
+</section>
+
+<form method="get" class="filter-toolbar">
+    <input type="hidden" name="sort" value="@Model.Sort" />
+    <label class="form-label filter-field-wide">
+        Tìm kiếm
+        <input name="q" value="@Model.Query" class="form-control" placeholder="Tên, mã bệnh nhân, số điện thoại, CCCD, bác sĩ hoặc khoa" />
+    </label>
+    <label class="form-label">
+        Từ ngày
+        <input name="fromDate" value="@Model.FromDate?.ToString("yyyy-MM-dd")" type="date" class="form-control" />
+    </label>
+    <label class="form-label">
+        Đến ngày
+        <input name="toDate" value="@Model.ToDate?.ToString("yyyy-MM-dd")" type="date" class="form-control" />
+    </label>
+    <label class="form-label">
+        Bác sĩ
+        <select name="doctorId" class="form-select" disabled="@Model.IsDoctorRestricted">
+            <option value="">Tất cả bác sĩ</option>
+            @foreach (var doctor in Model.Doctors)
+            {
+                <option value="@doctor.DoctorId" selected="@(Model.DoctorId == doctor.DoctorId ? "selected" : null)">@doctor.FullName</option>
+            }
+        </select>
+    </label>
+    <label class="form-label">
+        Chuyên khoa
+        <select name="departmentId" class="form-select">
+            <option value="">Tất cả chuyên khoa</option>
+            @foreach (var department in Model.Departments)
+            {
+                <option value="@department.DepartmentId" selected="@(Model.DepartmentId == department.DepartmentId ? "selected" : null)">@department.DepartmentName</option>
+            }
+        </select>
+    </label>
+    <label class="form-label">
+        Mỗi trang
+        <select name="pageSize" class="form-select">
+            @foreach (var option in Model.PageSizeOptions)
+            {
+                <option value="@option" selected="@(Model.PageSize == option ? "selected" : null)">@option bản ghi</option>
+            }
+        </select>
+    </label>
+    @if (Model.IsDoctorRestricted && Model.DoctorId is not null)
+    {
+        <input type="hidden" name="doctorId" value="@Model.DoctorId" />
+    }
+    <div class="filter-actions">
+        <button class="btn btn-primary" type="submit">Tra cứu</button>
+        <a class="btn btn-outline-secondary" asp-action="Index">Bỏ lọc</a>
+    </div>
+</form>
+
+@if (Model.DisplayedFromDate is not null && Model.DisplayedToDate is not null)
+{
+    <section class="summary-box range-summary">
+        <span>Khoảng thời gian đã được điền sẵn trong bộ lọc</span>
+        <strong>@Model.TotalCount hồ sơ phù hợp với bộ lọc hiện tại</strong>
+        <small>Bạn có thể đổi ngày ngay trong form để thu hẹp hoặc mở rộng lịch sử khám.</small>
+    </section>
+}
+
+@if (!Model.Results.Any())
+{
+    <div class="empty-state">
+        <h1>Chưa có hồ sơ phù hợp</h1>
+        <p>Hồ sơ sẽ xuất hiện sau khi bác sĩ nhập và lưu kết quả khám bệnh.</p>
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+            <tr>
+                <th>Mã lịch</th>
+                <th>@await Html.PartialAsync("_SortHeader", SortHeader("Bệnh nhân", "patient", "patient_desc"))</th>
+                <th>@await Html.PartialAsync("_SortHeader", SortHeader("Bác sĩ", "doctor", "doctor_desc"))</th>
+                <th>Chuyên khoa</th>
+                <th>@await Html.PartialAsync("_SortHeader", SortHeader("Ngày khám", "date", "date_desc"))</th>
+                <th>@await Html.PartialAsync("_SortHeader", SortHeader("Chẩn đoán", "diagnosis", "diagnosis_desc"))</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (var item in Model.Results)
+            {
+                <tr>
+                    <td>#@item.Appointment.AppointmentId</td>
+                    <td>
+                        <strong>@item.Patient.FullName</strong><br />
+                        <span class="text-muted">@item.Patient.Phone</span>
+                    </td>
+                    <td>@item.Doctor.FullName</td>
+                    <td>@item.Department.DepartmentName</td>
+                    <td>@item.Appointment.AppointmentDate.ToString("dd/MM/yyyy") @item.Appointment.TimeSlot</td>
+                    <td>@(item.MedicalRecord?.Diagnosis ?? "Chưa có chẩn đoán")</td>
+                    <td class="text-end">
+                        <a class="btn btn-outline-primary btn-sm" asp-action="Details" asp-route-id="@item.Appointment.AppointmentId">Chi tiết</a>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+
+    <partial name="_ListPager" model="pager" />
+}

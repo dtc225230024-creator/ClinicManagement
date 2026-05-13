@@ -1,0 +1,88 @@
+@model ClinicManagement.Models.UserAccount
+@using Microsoft.AspNetCore.Mvc.Rendering
+@{
+    ViewData["Title"] = Model.UserId == 0 ? "Thêm tài khoản" : "Cập nhật tài khoản";
+    var assignableDoctors = ViewBag.AssignableDoctors as IEnumerable<SelectListItem> ?? Enumerable.Empty<SelectListItem>();
+    var doctorRoleValue = ClinicManagement.Models.UserRole.Doctor.ToString();
+}
+
+<h1>@ViewData["Title"]</h1>
+
+<form asp-action="EditUser" method="post" class="form-grid">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <input asp-for="UserId" type="hidden" />
+
+    <label class="form-label">
+        Tên đăng nhập
+        <input asp-for="Username" class="form-control" />
+        <span asp-validation-for="Username" class="text-danger"></span>
+    </label>
+
+    <div class="form-label">
+        Mật khẩu
+        @if (Model.UserId == 0)
+        {
+            <div class="form-text">Tài khoản mới sẽ được cấp mật khẩu tạm thời ngẫu nhiên và phải đổi mật khẩu khi đăng nhập lần đầu.</div>
+        }
+        else
+        {
+            <div class="form-text">Mật khẩu không sửa tại đây. Sử dụng nút Reset MK trong danh sách tài khoản khi cần cấp mật khẩu tạm thời mới.</div>
+        }
+    </div>
+
+    <label class="form-label">
+        Vai trò
+        <select asp-for="Role" class="form-select">
+            <option value="@ClinicManagement.Models.UserRole.Admin">Admin</option>
+            <option value="@ClinicManagement.Models.UserRole.Receptionist">Lễ tân</option>
+            <option value="@ClinicManagement.Models.UserRole.Doctor">Bác sĩ</option>
+        </select>
+    </label>
+
+    <label class="form-label">
+        Bác sĩ liên kết
+        <select asp-for="DoctorId" asp-items="assignableDoctors" class="form-select" id="doctorSelect">
+            <option value="">Không liên kết</option>
+        </select>
+        <span class="form-text">Chỉ áp dụng cho tài khoản vai trò Bác sĩ.</span>
+    </label>
+
+    <label class="form-check">
+        <input asp-for="IsActive" class="form-check-input" /> Đang hoạt động
+    </label>
+
+    <div class="form-actions">
+        <button class="btn btn-primary"
+                type="submit"
+                data-confirm-modal="true"
+                data-confirm-title="@(Model.UserId == 0 ? "Tạo tài khoản mới?" : "Lưu thay đổi tài khoản?")"
+                data-confirm-message="@(Model.UserId == 0 ? "Tài khoản mới sẽ được tạo với mật khẩu tạm thời ngẫu nhiên và bắt buộc đổi mật khẩu khi đăng nhập lần đầu." : "Thông tin tài khoản sẽ được cập nhật ngay sau khi lưu.")"
+                data-confirm-text="@(Model.UserId == 0 ? "Tạo tài khoản" : "Lưu thay đổi")"
+                data-confirm-style="primary">Lưu</button>
+        <a class="btn btn-outline-secondary" asp-action="Users">Quay lại</a>
+    </div>
+</form>
+
+@section Scripts
+{
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (() => {
+            const roleSelect = document.getElementById("Role");
+            const doctorSelect = document.getElementById("doctorSelect");
+            const doctorRoleValue = "@doctorRoleValue";
+
+            function syncDoctorLinkState() {
+                const isDoctorRole = roleSelect && roleSelect.value === doctorRoleValue;
+                doctorSelect.disabled = !isDoctorRole;
+
+                if (!isDoctorRole) {
+                    doctorSelect.value = "";
+                }
+            }
+
+            roleSelect?.addEventListener("change", syncDoctorLinkState);
+            syncDoctorLinkState();
+        })();
+    </script>
+}

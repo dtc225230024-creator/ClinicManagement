@@ -1,0 +1,75 @@
+@model ClinicManagement.ViewModels.UserManualViewModel
+
+<div class="modal fade user-manual-modal"
+     id="userManualModal"
+     tabindex="-1"
+     aria-labelledby="userManualModalTitle"
+     aria-hidden="true"
+     data-bs-backdrop="true"
+     data-show-on-load="@(Model.ShowOnLoad ? "true" : "false")">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <p class="eyebrow mb-1">@Model.RoleName</p>
+                    <h5 class="modal-title" id="userManualModalTitle">@Model.Title</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body user-manual-body">
+                <p class="manual-summary">@Model.Summary</p>
+
+                <section class="manual-section">
+                    <h6>Quyền truy cập</h6>
+                    <ul>
+                        @foreach (var item in Model.Permissions)
+                        {
+                            <li>@item</li>
+                        }
+                    </ul>
+                </section>
+
+                <section class="manual-section">
+                    <h6>Chức năng chính</h6>
+                    <ul>
+                        @foreach (var item in Model.Features)
+                        {
+                            <li>@item</li>
+                        }
+                    </ul>
+                </section>
+
+                @foreach (var workflow in Model.Workflows)
+                {
+                    <section class="manual-section">
+                        <h6>@workflow.Title</h6>
+                        <ol>
+                            @foreach (var step in workflow.Steps)
+                            {
+                                <li>@step</li>
+                            }
+                        </ol>
+                    </section>
+                }
+
+                <section class="manual-section">
+                    <h6>Lưu ý</h6>
+                    <ul>
+                        @foreach (var note in Model.Notes)
+                        {
+                            <li>@note</li>
+                        }
+                    </ul>
+                </section>
+            </div>
+            <div class="modal-footer">
+                <span class="manual-version">Phiên bản @Model.Version</span>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
+                <form asp-controller="Home" asp-action="MarkManualSeen" method="post" data-user-manual-seen-form="true">
+                    <input type="hidden" name="version" value="@Model.Version" />
+                    <button type="submit" class="btn btn-primary">Đã hiểu</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

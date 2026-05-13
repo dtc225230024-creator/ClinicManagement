@@ -1,0 +1,147 @@
+@model ClinicManagement.ViewModels.DoctorScheduleViewModel
+@{
+    ViewData["Title"] = "Lịch khám cá nhân";
+    var items = Model.Items.ToList();
+    var isCompletedTab = string.Equals(Model.ActiveTab, "completed", StringComparison.OrdinalIgnoreCase);
+    var currentDate = Model.Date?.ToString("yyyy-MM-dd");
+    var filterRouteValues = new Dictionary<string, string?>
+    {
+        ["tab"] = Model.ActiveTab,
+        ["date"] = currentDate,
+        ["sort"] = Model.Sort,
+        ["pageSize"] = Model.PageSize.ToString()
+    };
+    ClinicManagement.ViewModels.SortHeaderViewModel SortHeader(string label, string ascendingSort, string descendingSort) => new()
+    {
+        Label = label,
+        AscendingSort = ascendingSort,
+        DescendingSort = descendingSort,
+        CurrentSort = Model.Sort,
+        RouteValues = filterRouteValues
+    };
+    var pager = new ClinicManagement.ViewModels.PagerViewModel
+    {
+        Page = Model.Page,
+        TotalPages = Model.TotalPages,
+        TotalCount = Model.TotalCount,
+        StartItem = Model.StartItem,
+        EndItem = Model.EndItem,
+        Pages = Model.GetVisiblePages(),
+        RouteValues = new Dictionary<string, string?>(filterRouteValues)
+    };
+}
+
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">Bác sĩ</p>
+        <h1>Lịch khám cá nhân</h1>
+    </div>
+</section>
+
+<nav class="range-preset-bar" aria-label="Chuyển tab lịch khám">
+    <a class="range-preset-link @(isCompletedTab ? string.Empty : "is-active")"
+       asp-action="Schedule"
+       asp-route-tab="current"
+       asp-route-date="@currentDate">Lịch khám hiện tại</a>
+    <a class="range-preset-link @(isCompletedTab ? "is-active" : string.Empty)"
+       asp-action="Schedule"
+       asp-route-tab="completed"
+       asp-route-date="@currentDate">Lịch khám đã hoàn thành</a>
+</nav>
+
+<form method="get" class="filter-toolbar compact">
+    <input type="hidden" name="tab" value="@Model.ActiveTab" />
+    <input type="hidden" name="sort" value="@Model.Sort" />
+    <label class="form-label">
+        Ngày khám
+        <input name="date" value="@currentDate" type="date" class="form-control" />
+    </label>
+    <label class="form-label">
+        Mỗi trang
+        <select name="pageSize" class="form-select">
+            @foreach (var option in Model.PageSizeOptions)
+            {
+                <option value="@option" selected="@(Model.PageSize == option ? "selected" : null)">@option bản ghi</option>
+            }
+        </select>
+    </label>
+    <div class="filter-actions">
+        <button class="btn btn-outline-primary" type="submit">Lọc theo ngày</button>
+        <a class="btn btn-outline-secondary" asp-action="Schedule" asp-route-tab="@Model.ActiveTab">Bỏ lọc</a>
+    </div>
+</form>
+
+@if (items.Any())
+{
+    <table class="table align-middle">
+        <thead>
+        <tr>
+            <th>Mã</th>
+            <th>@await Html.PartialAsync("_SortHeader", SortHeader("Bệnh nhân", "patient", "patient_desc"))</th>
+            <th>@await Html.PartialAsync("_SortHeader", SortHeader("Ngày", "date", "date_desc"))</th>
+            <th>@await Html.PartialAsync("_SortHeader", SortHeader("Giờ", "time", "time_desc"))</th>
+            <th>Lý do khám</th>
+            @if (isCompletedTab)
+            {
+                <th>@await Html.PartialAsync("_SortHeader", SortHeader("Nhập kết quả lúc", "recorded", "recorded_desc"))</th>
+            }
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var item in items)
+        {
+            <tr>
+                <td>#@item.Appointment.AppointmentId</td>
+                <td>@item.Patient.FullName<br /><span class="text-muted">@item.Patient.Phone</span></td>
+                <td>@item.Appointment.AppointmentDate.ToString("dd/MM/yyyy")</td>
+                <td>@item.Appointment.TimeSlot</td>
+                <td>@item.Appointment.Reason</td>
+                @if (isCompletedTab)
+                {
+                    <td>
+                        @if (item.MedicalRecord is not null)
+                        {
+                            <span>@item.MedicalRecord.CreatedAt.ToString("dd/MM/yyyy HH:mm")</span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">Chưa ghi nhận</span>
+                        }
+                    </td>
+                }
+                <td class="text-end">
+                    <div class="action-stack">
+                        <a class="btn btn-outline-secondary btn-sm" asp-action="Details" asp-route-appointmentId="@item.Appointment.AppointmentId">Chi tiết</a>
+                        @if (isCompletedTab)
+                        {
+                            <a class="btn btn-outline-primary btn-sm" asp-action="MedicalRecord" asp-route-appointmentId="@item.Appointment.AppointmentId">Xem / cập nhật</a>
+                        }
+                        else
+                        {
+                            <a class="btn btn-outline-primary btn-sm" asp-action="MedicalRecord" asp-route-appointmentId="@item.Appointment.AppointmentId">Nhập kết quả</a>
+                        }
+                    </div>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+
+    <partial name="_ListPager" model="pager" />
+}
+else
+{
+    <section class="empty-state">
+        @if (isCompletedTab)
+        {
+            <h2>Chưa có lịch khám đã hoàn thành</h2>
+            <p class="mb-0">Những ca đã được nhập kết quả sẽ hiện trong tab này.</p>
+        }
+        else
+        {
+            <h2>Không có lịch khám cần xử lý</h2>
+            <p class="mb-0">Danh sách này chỉ hiện các lịch khám chưa hoàn tất và chưa bị hủy.</p>
+        }
+    </section>
+}

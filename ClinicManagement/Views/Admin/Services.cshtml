@@ -1,0 +1,122 @@
+@model ClinicManagement.ViewModels.ServiceDirectoryViewModel
+@{
+    ViewData["Title"] = "Quản lý dịch vụ khám";
+    var filterRouteValues = new Dictionary<string, string?>
+    {
+        ["q"] = Model.Query,
+        ["status"] = Model.Status,
+        ["sort"] = Model.Sort,
+        ["pageSize"] = Model.PageSize.ToString()
+    };
+    ClinicManagement.ViewModels.SortHeaderViewModel SortHeader(string label, string ascendingSort, string descendingSort) => new()
+    {
+        Label = label,
+        AscendingSort = ascendingSort,
+        DescendingSort = descendingSort,
+        CurrentSort = Model.Sort,
+        RouteValues = filterRouteValues
+    };
+    var pager = new ClinicManagement.ViewModels.PagerViewModel
+    {
+        Page = Model.Page,
+        TotalPages = Model.TotalPages,
+        TotalCount = Model.TotalCount,
+        StartItem = Model.StartItem,
+        EndItem = Model.EndItem,
+        Pages = Model.GetVisiblePages(),
+        RouteValues = new Dictionary<string, string?>(filterRouteValues)
+    };
+}
+
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">Quản trị viên</p>
+        <h1>Quản lý dịch vụ khám</h1>
+    </div>
+    <a class="btn btn-primary" asp-action="EditService">Thêm dịch vụ</a>
+</section>
+
+<form method="get" class="filter-toolbar compact">
+    <input type="hidden" name="sort" value="@Model.Sort" />
+    <label class="form-label filter-field-wide">
+        Tìm kiếm
+        <input name="q" value="@Model.Query" class="form-control" placeholder="Mã, tên dịch vụ hoặc mô tả" />
+    </label>
+    <label class="form-label">
+        Trạng thái
+        <select name="status" class="form-select">
+            <option value="">Tất cả trạng thái</option>
+            <option value="active" selected="@(Model.Status == "active" ? "selected" : null)">Áp dụng</option>
+            <option value="inactive" selected="@(Model.Status == "inactive" ? "selected" : null)">Tạm ngưng</option>
+        </select>
+    </label>
+    <label class="form-label">
+        Mỗi trang
+        <select name="pageSize" class="form-select">
+            @foreach (var option in Model.PageSizeOptions)
+            {
+                <option value="@option" selected="@(Model.PageSize == option ? "selected" : null)">@option bản ghi</option>
+            }
+        </select>
+    </label>
+    <div class="filter-actions">
+        <button class="btn btn-primary" type="submit">Áp dụng</button>
+        <a class="btn btn-outline-secondary" asp-action="Services">Bỏ lọc</a>
+    </div>
+</form>
+
+@if (!Model.Items.Any())
+{
+    <div class="empty-state">
+        <h1>Không có dịch vụ phù hợp</h1>
+        <p>Hãy thử tìm theo tên dịch vụ hoặc điều chỉnh bộ lọc hiện tại.</p>
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+            <tr>
+                <th>Mã</th>
+                <th>@await Html.PartialAsync("_SortHeader", SortHeader("Tên dịch vụ", "name", "name_desc"))</th>
+                <th>@await Html.PartialAsync("_SortHeader", SortHeader("Đơn giá", "price", "price_desc"))</th>
+                <th>Mô tả</th>
+                <th>@await Html.PartialAsync("_SortHeader", SortHeader("Trạng thái", "status", "status_desc"))</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (var service in Model.Items)
+            {
+                <tr>
+                    <td>@service.ServiceId</td>
+                    <td>@service.ServiceName</td>
+                    <td>@service.Price.ToString("N0") đ</td>
+                    <td>@service.Description</td>
+                    <td>
+                        <span class="badge @(service.IsActive ? "bg-success" : "bg-secondary")">
+                            @(service.IsActive ? "Áp dụng" : "Tạm ngưng")
+                        </span>
+                    </td>
+                    <td class="text-end action-stack">
+                        <a class="btn btn-outline-primary btn-sm" asp-action="EditService" asp-route-id="@service.ServiceId">Sửa</a>
+                        <form asp-action="ToggleService" method="post" class="d-inline">
+                            <input type="hidden" name="id" value="@service.ServiceId" />
+                            <button class="btn btn-outline-warning btn-sm"
+                                    type="submit"
+                                    data-confirm-modal="true"
+                                    data-confirm-title="@(service.IsActive ? "Ngưng áp dụng dịch vụ?" : "Mở lại dịch vụ?")"
+                                    data-confirm-message="@(service.IsActive ? $"Dịch vụ {service.ServiceName} sẽ tạm ngưng trong hóa đơn mới." : $"Dịch vụ {service.ServiceName} sẽ được mở lại để sử dụng tiếp.")"
+                                    data-confirm-text="@(service.IsActive ? "Ngưng" : "Mở")"
+                                    data-confirm-style="warning">@(service.IsActive ? "Ngưng" : "Mở")</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+
+    <partial name="_ListPager" model="pager" />
+}

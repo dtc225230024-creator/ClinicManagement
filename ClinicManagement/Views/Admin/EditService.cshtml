@@ -1,0 +1,46 @@
+@model ClinicManagement.Models.ClinicService
+@{
+    ViewData["Title"] = Model.ServiceId == 0 ? "Thêm dịch vụ khám" : "Cập nhật dịch vụ khám";
+}
+
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">Dịch vụ khám</p>
+        <h1>@ViewData["Title"]</h1>
+    </div>
+    <a class="btn btn-outline-secondary" asp-action="Services">Quay lại</a>
+</section>
+
+<form asp-action="EditService" method="post" class="form-grid">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <input asp-for="ServiceId" type="hidden" />
+
+    <label class="form-label">
+        Tên dịch vụ
+        <input asp-for="ServiceName" class="form-control" />
+        <span asp-validation-for="ServiceName" class="text-danger"></span>
+    </label>
+
+    <label class="form-label">
+        Đơn giá
+        <input asp-for="Price" class="form-control" type="number" min="0" step="1000" />
+        <span asp-validation-for="Price" class="text-danger"></span>
+    </label>
+
+    <label class="form-label">
+        Mô tả
+        <textarea asp-for="Description" class="form-control" rows="4"></textarea>
+    </label>
+
+    <label class="form-check">
+        <input asp-for="IsActive" class="form-check-input" />
+        Đang áp dụng
+    </label>
+
+    <div class="form-actions">
+        <button class="btn btn-primary" type="submit">Lưu</button>
+        <a class="btn btn-outline-secondary" asp-action="Services">Hủy</a>
+    </div>
+</form>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

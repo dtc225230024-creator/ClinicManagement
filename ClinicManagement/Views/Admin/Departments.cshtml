@@ -1,0 +1,120 @@
+@model ClinicManagement.ViewModels.DepartmentDirectoryViewModel
+@{
+    ViewData["Title"] = "Quản lý chuyên khoa";
+    var filterRouteValues = new Dictionary<string, string?>
+    {
+        ["q"] = Model.Query,
+        ["status"] = Model.Status,
+        ["sort"] = Model.Sort,
+        ["pageSize"] = Model.PageSize.ToString()
+    };
+    ClinicManagement.ViewModels.SortHeaderViewModel SortHeader(string label, string ascendingSort, string descendingSort) => new()
+    {
+        Label = label,
+        AscendingSort = ascendingSort,
+        DescendingSort = descendingSort,
+        CurrentSort = Model.Sort,
+        RouteValues = filterRouteValues
+    };
+    var pager = new ClinicManagement.ViewModels.PagerViewModel
+    {
+        Page = Model.Page,
+        TotalPages = Model.TotalPages,
+        TotalCount = Model.TotalCount,
+        StartItem = Model.StartItem,
+        EndItem = Model.EndItem,
+        Pages = Model.GetVisiblePages(),
+        RouteValues = new Dictionary<string, string?>(filterRouteValues)
+    };
+}
+
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">Quản trị viên</p>
+        <h1>Quản lý chuyên khoa</h1>
+    </div>
+    <a class="btn btn-primary" asp-action="EditDepartment">Thêm chuyên khoa</a>
+</section>
+
+<form method="get" class="filter-toolbar compact">
+    <input type="hidden" name="sort" value="@Model.Sort" />
+    <label class="form-label filter-field-wide">
+        Tìm kiếm
+        <input name="q" value="@Model.Query" class="form-control" placeholder="Mã, tên chuyên khoa hoặc mô tả" />
+    </label>
+    <label class="form-label">
+        Trạng thái
+        <select name="status" class="form-select">
+            <option value="">Tất cả trạng thái</option>
+            <option value="active" selected="@(Model.Status == "active" ? "selected" : null)">Hoạt động</option>
+            <option value="inactive" selected="@(Model.Status == "inactive" ? "selected" : null)">Tạm ngưng</option>
+        </select>
+    </label>
+    <label class="form-label">
+        Mỗi trang
+        <select name="pageSize" class="form-select">
+            @foreach (var option in Model.PageSizeOptions)
+            {
+                <option value="@option" selected="@(Model.PageSize == option ? "selected" : null)">@option bản ghi</option>
+            }
+        </select>
+    </label>
+    <div class="filter-actions">
+        <button class="btn btn-primary" type="submit">Áp dụng</button>
+        <a class="btn btn-outline-secondary" asp-action="Departments">Bỏ lọc</a>
+    </div>
+</form>
+
+@if (!Model.Items.Any())
+{
+    <div class="empty-state">
+        <h1>Không có chuyên khoa phù hợp</h1>
+        <p>Danh sách sẽ hiển thị sau khi có dữ liệu trùng với bộ lọc hiện tại.</p>
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+            <tr>
+                <th>@await Html.PartialAsync("_SortHeader", SortHeader("Mã", "id", "id_desc"))</th>
+                <th>@await Html.PartialAsync("_SortHeader", SortHeader("Tên chuyên khoa", "name", "name_desc"))</th>
+                <th>Mô tả</th>
+                <th>@await Html.PartialAsync("_SortHeader", SortHeader("Trạng thái", "status", "status_desc"))</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (var department in Model.Items)
+            {
+                <tr>
+                    <td>@department.DepartmentId</td>
+                    <td>@department.DepartmentName</td>
+                    <td>@department.Description</td>
+                    <td>
+                        <span class="badge @(department.IsActive ? "bg-success" : "bg-secondary")">
+                            @(department.IsActive ? "Hoạt động" : "Tạm ngưng")
+                        </span>
+                    </td>
+                    <td class="text-end action-stack">
+                        <a class="btn btn-outline-primary btn-sm" asp-action="EditDepartment" asp-route-id="@department.DepartmentId">Sửa</a>
+                        <form asp-action="ToggleDepartment" method="post" class="d-inline">
+                            <input type="hidden" name="id" value="@department.DepartmentId" />
+                            <button class="btn btn-outline-warning btn-sm"
+                                    type="submit"
+                                    data-confirm-modal="true"
+                                    data-confirm-title="@(department.IsActive ? "Ngưng chuyên khoa?" : "Mở lại chuyên khoa?")"
+                                    data-confirm-message="@(department.IsActive ? $"Chuyên khoa {department.DepartmentName} sẽ tạm dừng tiếp nhận dữ liệu mới." : $"Chuyên khoa {department.DepartmentName} sẽ được mở lại để tiếp tục sử dụng.")"
+                                    data-confirm-text="@(department.IsActive ? "Ngưng" : "Mở")"
+                                    data-confirm-style="warning">@(department.IsActive ? "Ngưng" : "Mở")</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+
+    <partial name="_ListPager" model="pager" />
+}

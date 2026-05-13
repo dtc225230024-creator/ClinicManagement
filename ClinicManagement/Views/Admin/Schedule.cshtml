@@ -1,0 +1,97 @@
+@model ClinicManagement.ViewModels.ScheduleEditViewModel
+@{
+    ViewData["Title"] = "Lịch làm việc";
+    var filterRouteValues = new Dictionary<string, string?>
+    {
+        ["id"] = Model.DoctorId.ToString(),
+        ["sort"] = Model.Sort,
+        ["pageSize"] = Model.PageSize.ToString()
+    };
+    ClinicManagement.ViewModels.SortHeaderViewModel SortHeader(string label, string ascendingSort, string descendingSort) => new()
+    {
+        Label = label,
+        AscendingSort = ascendingSort,
+        DescendingSort = descendingSort,
+        CurrentSort = Model.Sort,
+        RouteValues = filterRouteValues
+    };
+    var pager = new ClinicManagement.ViewModels.PagerViewModel
+    {
+        Page = Model.Page,
+        TotalPages = Model.TotalPages,
+        TotalCount = Model.TotalCount,
+        StartItem = Model.StartItem,
+        EndItem = Model.EndItem,
+        Pages = Model.GetVisiblePages(),
+        RouteValues = new Dictionary<string, string?>(filterRouteValues)
+    };
+}
+
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">Lịch bác sĩ</p>
+        <h1>@Model.Doctor?.FullName</h1>
+    </div>
+    <a class="btn btn-outline-secondary" asp-action="Doctors">Danh sách bác sĩ</a>
+</section>
+
+<form asp-action="AddSchedule" method="post" class="inline-form">
+    <input asp-for="DoctorId" type="hidden" />
+    <input asp-for="WorkDate" class="form-control" />
+    <input asp-for="StartTime" class="form-control" />
+    <input asp-for="EndTime" class="form-control" />
+    <button class="btn btn-primary" type="submit">Thêm ca</button>
+</form>
+
+<form method="get" class="filter-toolbar compact mt-4">
+    <input type="hidden" name="id" value="@Model.DoctorId" />
+    <input type="hidden" name="sort" value="@Model.Sort" />
+    <label class="form-label">
+        Mỗi trang
+        <select name="pageSize" class="form-select">
+            @foreach (var option in Model.PageSizeOptions)
+            {
+                <option value="@option" selected="@(Model.PageSize == option ? "selected" : null)">@option bản ghi</option>
+            }
+        </select>
+    </label>
+    <div class="filter-actions">
+        <button class="btn btn-outline-primary" type="submit">Áp dụng</button>
+    </div>
+</form>
+
+<table class="table align-middle mt-4">
+    <thead>
+    <tr>
+        <th>@await Html.PartialAsync("_SortHeader", SortHeader("Ngày", "date", "date_desc"))</th>
+        <th>@await Html.PartialAsync("_SortHeader", SortHeader("Bắt đầu", "start", "start_desc"))</th>
+        <th>@await Html.PartialAsync("_SortHeader", SortHeader("Kết thúc", "end", "end_desc"))</th>
+        <th></th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach (var schedule in Model.Items)
+    {
+        <tr>
+            <td>@schedule.WorkDate.ToString("dd/MM/yyyy")</td>
+            <td>@schedule.StartTime.ToString(@"hh\:mm")</td>
+            <td>@schedule.EndTime.ToString(@"hh\:mm")</td>
+            <td class="text-end">
+                <form asp-action="RemoveSchedule" method="post">
+                    <input type="hidden" name="id" value="@schedule.ScheduleId" />
+                    <input type="hidden" name="doctorId" value="@Model.DoctorId" />
+                    <button class="btn btn-outline-danger btn-sm"
+                            type="submit"
+                            data-confirm-modal="true"
+                            data-confirm-title="Ẩn ca làm việc?"
+                            data-confirm-message="Ca @schedule.WorkDate.ToString("dd/MM/yyyy") @schedule.StartTime.ToString(@"hh\:mm")-@schedule.EndTime.ToString(@"hh\:mm") sẽ bị ẩn khỏi lịch hoạt động của bác sĩ."
+                            data-confirm-text="Ẩn ca"
+                            data-confirm-style="danger">Ẩn</button>
+                </form>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>
+
+<partial name="_ListPager" model="pager" />

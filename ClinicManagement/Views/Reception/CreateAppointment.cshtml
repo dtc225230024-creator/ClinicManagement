@@ -1,0 +1,325 @@
+@model ClinicManagement.ViewModels.AppointmentCreateViewModel
+@{
+    ViewData["Title"] = "Đặt lịch khám";
+}
+
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">Tiếp nhận</p>
+        <h1>Đặt lịch khám</h1>
+        <p>Đi từng bước để tiếp nhận nhu cầu, chọn hồ sơ bệnh nhân và xác nhận lịch khám phù hợp.</p>
+    </div>
+    <a class="btn btn-outline-secondary" asp-action="Appointments">Tra cứu lịch</a>
+</section>
+
+<div class="booking-steps" aria-label="Tiến độ đặt lịch">
+    <div class="booking-step @(Model.Step == 1 ? "active" : Model.Step > 1 ? "done" : string.Empty)">
+        <span class="booking-step-index">1</span>
+        <div>
+            <strong>Nhu cầu và chuyên khoa</strong>
+            <small>AI gợi ý chuyên khoa phù hợp</small>
+        </div>
+    </div>
+    <div class="booking-step @(Model.Step == 2 ? "active" : Model.Step > 2 ? "done" : string.Empty)">
+        <span class="booking-step-index">2</span>
+        <div>
+            <strong>Tra cứu bệnh nhân</strong>
+            <small>Chọn hồ sơ đăng ký khám</small>
+        </div>
+    </div>
+    <div class="booking-step @(Model.Step == 3 ? "active" : string.Empty)">
+        <span class="booking-step-index">3</span>
+        <div>
+            <strong>Chọn lịch khám</strong>
+            <small>Khung giờ, bác sĩ và xác nhận đặt lịch</small>
+        </div>
+    </div>
+</div>
+
+<form asp-action="CreateAppointment" method="post" class="booking-wizard">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <input asp-for="Step" type="hidden" />
+
+    @if (Model.Step >= 2)
+    {
+        <input asp-for="Reason" type="hidden" />
+        <input asp-for="DepartmentId" type="hidden" />
+    }
+
+    @if (Model.Step >= 3)
+    {
+        <input asp-for="PatientId" type="hidden" />
+        <input asp-for="PatientSearch" type="hidden" />
+        <input asp-for="PatientSearchPerformed" type="hidden" />
+    }
+
+    @if (Model.Step != 3)
+    {
+        <input asp-for="DesiredDate" type="hidden" />
+        <input asp-for="SelectedTimeSlot" type="hidden" />
+        <input asp-for="SelectedSuggestionKey" type="hidden" />
+    }
+
+    @if (Model.Step == 1)
+    {
+        <section class="booking-panel">
+            <div class="booking-panel-header">
+                <h2>Bước 1. Tiếp nhận nhu cầu khám</h2>
+                <p>Nhập thông tin triệu chứng hoặc yêu cầu khám để AI gợi ý chuyên khoa phù hợp.</p>
+            </div>
+
+            <label class="form-label">
+                Nhu cầu khám / triệu chứng
+                <textarea asp-for="Reason"
+                          class="form-control"
+                          rows="4"
+                          placeholder="Ví dụ: bệnh nhân ho, khó thở, đau họng, sốt nhẹ..."
+                          data-ai-department-source="true"
+                          data-ai-department-url="@Url.Action("SuggestDepartments", "Reception")"></textarea>
+                <span asp-validation-for="Reason" class="text-danger"></span>
+            </label>
+
+            <div class="booking-subsection">
+                <div class="section-heading-inline">
+                    <div>
+                        <h3>Chuyên khoa AI gợi ý</h3>
+                        <p>Lễ tân vẫn là người quyết định chuyên khoa cuối cùng.</p>
+                    </div>
+                </div>
+
+                @if (Model.Departments.Any())
+                {
+                    <div class="choice-list department-suggestion-list" data-ai-department-list="true">
+                        @foreach (var item in Model.Departments.Select((department, index) => new { department, index }))
+                        {
+                            var isAiSuggested = Model.AiSuggestedDepartmentIds.Contains(item.department.DepartmentId);
+                            <label class="choice-item department-choice @(isAiSuggested ? "ai-suggested" : string.Empty)"
+                                   data-department-choice="true"
+                                   data-department-id="@item.department.DepartmentId">
+                                <input type="radio" asp-for="DepartmentId" value="@item.department.DepartmentId" />
+                                <span data-department-name="true">@item.department.DepartmentName</span>
+                                <small>@(string.IsNullOrWhiteSpace(item.department.Description) ? "Chuyên khoa đang hoạt động và có lịch làm việc." : item.department.Description)</small>
+                                <span class="choice-badge ai-choice-marker">AI gợi ý</span>
+                            </label>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <section class="empty-state">
+                        <h2>Chưa có chuyên khoa phù hợp</h2>
+                        <p class="mb-0">Hệ thống hiện chưa tìm được chuyên khoa đang hoạt động để tiếp nhận nhu cầu này.</p>
+                    </section>
+                }
+            </div>
+
+            <div class="booking-actions">
+                <button class="btn btn-primary" name="command" value="next-step-1" type="submit">Tiếp: Chọn bệnh nhân</button>
+            </div>
+        </section>
+    }
+    else if (Model.Step == 2)
+    {
+        <section class="booking-panel">
+            <div class="booking-panel-header">
+                <h2>Bước 2. Tra cứu hồ sơ bệnh nhân</h2>
+                <p>Tìm bệnh nhân theo tên hoặc số điện thoại. Nếu chưa có hồ sơ, có thể tạo mới rồi quay lại đây.</p>
+            </div>
+
+            <div class="booking-summary-grid">
+                <article class="summary-box">
+                    <p class="eyebrow">Nhu cầu khám</p>
+                    <strong>@Model.Reason</strong>
+                </article>
+                <article class="summary-box">
+                    <p class="eyebrow">Chuyên khoa đã chọn</p>
+                    <strong>@(Model.SelectedDepartment?.DepartmentName ?? "Chưa chọn")</strong>
+                </article>
+            </div>
+
+            <div class="search-bar compact">
+                <label class="form-label mb-0">
+                    Tra cứu bệnh nhân
+                    <input asp-for="PatientSearch" class="form-control" placeholder="Nhập tên hoặc số điện thoại" />
+                    <span asp-validation-for="PatientSearch" class="text-danger"></span>
+                </label>
+                <button class="btn btn-outline-primary" name="command" value="search-patient" type="submit">Tra cứu</button>
+            </div>
+
+            @if (Model.Patients.Any())
+            {
+                <div class="choice-list">
+                    @foreach (var patient in Model.Patients)
+                    {
+                        <label class="choice-item">
+                            <input type="radio" asp-for="PatientId" value="@patient.PatientId" />
+                            <span>@patient.FullName</span>
+                            <small>@patient.Phone @(patient.DateOfBirth is null ? string.Empty : $"- {patient.DateOfBirth:dd/MM/yyyy}")</small>
+                        </label>
+                    }
+                </div>
+                <span asp-validation-for="PatientId" class="text-danger"></span>
+            }
+            else if (Model.PatientSearchPerformed)
+            {
+                <section class="empty-state">
+                    <h2>Không tìm thấy hồ sơ</h2>
+                    <p>Lễ tân có thể tạo hồ sơ bệnh nhân mới, sau đó hệ thống sẽ quay lại đúng bước tra cứu này.</p>
+                </section>
+            }
+            else
+            {
+                <section class="empty-state">
+                    <h2>Chưa tra cứu hồ sơ</h2>
+                    <p>Nhập tên hoặc số điện thoại để hiển thị danh sách kết quả bệnh nhân.</p>
+                </section>
+            }
+
+            <div class="booking-actions between">
+                <div class="button-row">
+                    <button class="btn btn-outline-secondary" name="command" value="back-step-1" type="submit">Quay lại bước 1</button>
+                    <a class="btn btn-outline-success" href="@Model.CreatePatientReturnUrl">Tạo hồ sơ bệnh nhân mới</a>
+                </div>
+                <button class="btn btn-primary" name="command" value="next-step-2" type="submit">Tiếp: Chọn lịch khám</button>
+            </div>
+        </section>
+    }
+    else
+    {
+        <section class="booking-panel">
+            <div class="booking-panel-header">
+                <h2>Bước 3. Chọn lịch khám và xác nhận</h2>
+                <p>Chọn khoảng thời gian khám, xem bác sĩ còn trống và xác nhận lịch phù hợp nhất.</p>
+            </div>
+
+            <div class="booking-summary-grid booking-summary-grid-wide">
+                <article class="summary-box">
+                    <p class="eyebrow">Nhu cầu khám</p>
+                    <strong>@Model.Reason</strong>
+                </article>
+                <article class="summary-box">
+                    <p class="eyebrow">Chuyên khoa</p>
+                    <strong>@(Model.SelectedDepartment?.DepartmentName ?? "Chưa chọn")</strong>
+                </article>
+                <article class="summary-box">
+                    <p class="eyebrow">Bệnh nhân</p>
+                    <strong>@(Model.SelectedPatient?.FullName ?? "Chưa chọn")</strong>
+                    <small>@Model.SelectedPatient?.Phone</small>
+                </article>
+            </div>
+
+            <div class="booking-toolbar">
+                <label class="form-label mb-0">
+                    Ngày khám mong muốn
+                    <input asp-for="DesiredDate" class="form-control" />
+                </label>
+                <button class="btn btn-outline-primary" name="command" value="refresh-step-3" type="submit">Cập nhật gợi ý</button>
+            </div>
+
+            <div class="booking-subsection">
+                <div class="section-heading-inline">
+                    <div>
+                        <h3>Khoảng thời gian khám gợi ý</h3>
+                        <p>Bước này tương ứng với gợi ý khoảng thời gian trong use case.</p>
+                    </div>
+                </div>
+
+                @if (Model.SuggestedTimeSlots.Any())
+                {
+                    var selectedSlot = Model.SuggestedTimeSlots.FirstOrDefault(x => x.TimeSlot == Model.SelectedTimeSlot);
+                    if (selectedSlot is not null)
+                    {
+                        <article class="selected-choice-summary">
+                            <div>
+                                <p class="eyebrow">Khoảng thời gian đã chọn</p>
+                                <strong>@selectedSlot.TimeSlot</strong>
+                                <small>@selectedSlot.Recommendation</small>
+                            </div>
+                            <span>@selectedSlot.AvailableDoctorCount bác sĩ còn trống</span>
+                        </article>
+                    }
+
+                    <details class="booking-collapsible" @(selectedSlot is null ? "open=\"open\"" : null)>
+                        <summary>@(selectedSlot is null ? "Chọn khoảng thời gian" : "Đổi khoảng thời gian")</summary>
+                        <div class="choice-list">
+                            @foreach (var slot in Model.SuggestedTimeSlots)
+                            {
+                                <label class="choice-item choice-item-rich">
+                                    <input type="radio"
+                                           asp-for="SelectedTimeSlot"
+                                           value="@slot.TimeSlot"
+                                           data-auto-submit-command="refresh-step-3" />
+                                    <span>@slot.TimeSlot</span>
+                                    <small>@slot.Recommendation</small>
+                                    <small>@slot.AvailableDoctorCount bác sĩ còn trống, @slot.BusyDoctorCount đã kín trong khung giờ này</small>
+                                </label>
+                            }
+                        </div>
+                    </details>
+                }
+                else
+                {
+                    <section class="empty-state">
+                        <h2>Chưa có khoảng thời gian phù hợp</h2>
+                        <p class="mb-0">Ngày này chưa có lịch làm việc phù hợp trong chuyên khoa đã chọn.</p>
+                    </section>
+                }
+            </div>
+
+            <div class="booking-subsection">
+                <div class="section-heading-inline">
+                    <div>
+                        <h3>Bác sĩ và lịch trống gợi ý</h3>
+                        <p>Chọn một lịch hoàn chỉnh gồm bác sĩ, ngày và khung giờ.</p>
+                    </div>
+                </div>
+
+                @if (string.IsNullOrWhiteSpace(Model.SelectedTimeSlot))
+                {
+                    <section class="empty-state">
+                        <h2>Hãy chọn khoảng thời gian trước</h2>
+                        <p class="mb-0">Sau khi chọn khung giờ, hệ thống sẽ hiện danh sách bác sĩ và lịch trống phù hợp.</p>
+                    </section>
+                }
+                else if (Model.AppointmentSuggestions.Any())
+                {
+                    <div class="suggestion-list">
+                        @foreach (var suggestion in Model.AppointmentSuggestions)
+                        {
+                            <label class="suggestion">
+                                <input type="radio" asp-for="SelectedSuggestionKey" value="@suggestion.SuggestionKey" />
+                                <strong>@suggestion.DoctorName</strong>
+                                <span>@suggestion.DepartmentName - @suggestion.Date.ToString("dd/MM/yyyy") - @suggestion.TimeSlot</span>
+                                <small>Điểm phù hợp: @suggestion.Score</small>
+                            </label>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <section class="empty-state">
+                        <h2>Không còn lịch trống ở khung giờ này</h2>
+                        <p class="mb-0">Thử chọn khoảng thời gian khác hoặc đổi ngày khám mong muốn.</p>
+                    </section>
+                }
+            </div>
+
+            <div class="booking-actions between">
+                <button class="btn btn-outline-secondary" name="command" value="back-step-2" type="submit">Quay lại bước 2</button>
+                <button class="btn btn-primary"
+                        name="command"
+                        value="book"
+                        type="submit"
+                        data-confirm-modal="true"
+                        data-confirm-title="Xác nhận đặt lịch?"
+                        data-confirm-message="Hệ thống sẽ tạo lịch khám theo bác sĩ và khung giờ đã chọn ở bước 3."
+                        data-confirm-text="Đặt lịch"
+                        data-confirm-style="primary">Xác nhận đặt lịch</button>
+            </div>
+        </section>
+    }
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

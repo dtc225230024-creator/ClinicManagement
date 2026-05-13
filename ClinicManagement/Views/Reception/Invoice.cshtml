@@ -1,0 +1,104 @@
+@model ClinicManagement.ViewModels.InvoiceViewModel
+@{
+    ViewData["Title"] = "Thanh toán";
+}
+
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">Thanh toán</p>
+        <h1>Hóa đơn lịch #@Model.AppointmentId</h1>
+    </div>
+    <a class="btn btn-outline-secondary" asp-action="Appointments">Quay lại</a>
+</section>
+
+<div class="summary-box">
+    <strong>@Model.Appointment?.Patient.FullName</strong>
+    <span>@Model.Appointment?.Doctor.FullName - @Model.Appointment?.Appointment.AppointmentDate.ToString("dd/MM/yyyy") @Model.Appointment?.Appointment.TimeSlot</span>
+    <span>Trạng thái: @(Model.Invoice?.PaymentStatus == ClinicManagement.Models.PaymentStatus.Paid ? "Đã thanh toán" : "Chưa thanh toán")</span>
+    @if (Model.Invoice is not null)
+    {
+        <span>Mã hóa đơn: HD-@Model.Invoice.InvoiceId.ToString("00000")</span>
+        <span>Ngày thanh toán: @Model.Invoice.CreatedAt.ToString("dd/MM/yyyy HH:mm")</span>
+    }
+</div>
+
+@if (Model.ExistingDetails.Any())
+{
+    <h2 class="section-title">Chi tiết hóa đơn đã lưu</h2>
+    <div class="form-actions mb-3">
+        <a class="btn btn-outline-primary"
+           asp-action="PrintInvoice"
+           asp-route-appointmentId="@Model.AppointmentId"
+           target="_blank"
+           rel="noopener">Xem bản in</a>
+    </div>
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+            <tr>
+                <th>Dịch vụ</th>
+                <th>Số lượng</th>
+                <th>Đơn giá</th>
+                <th>Thành tiền</th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (var detail in Model.ExistingDetails)
+            {
+                <tr>
+                    <td>@detail.ServiceName</td>
+                    <td>@detail.Quantity</td>
+                    <td>@detail.UnitPrice.ToString("N0") đ</td>
+                    <td>@detail.LineTotal.ToString("N0") đ</td>
+                </tr>
+            }
+            </tbody>
+            <tfoot>
+            <tr>
+                <th colspan="3">Tổng cộng</th>
+                <th>@Model.ExistingDetails.Sum(x => x.LineTotal).ToString("N0") đ</th>
+            </tr>
+            </tfoot>
+        </table>
+    </div>
+}
+else
+{
+    <div class="alert alert-info">Chưa có hóa đơn đã lưu cho lịch khám này.</div>
+}
+
+<h2 class="section-title">Chọn dịch vụ thanh toán</h2>
+<form asp-action="Invoice" method="post">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <input asp-for="AppointmentId" type="hidden" />
+    <div class="service-list">
+        @foreach (var service in Model.Services)
+        {
+            <label>
+                <input type="checkbox"
+                       name="SelectedServiceIds"
+                       value="@service.ServiceId"
+                       checked="@Model.SelectedServiceIds.Contains(service.ServiceId)" />
+                <span>@service.ServiceName</span>
+                <strong>@service.Price.ToString("N0") đ</strong>
+            </label>
+        }
+    </div>
+    <div class="form-actions mt-3">
+        <button class="btn btn-primary"
+                type="submit"
+                data-confirm-modal="true"
+                data-confirm-title="@(Model.Invoice is null ? "Xác nhận thanh toán?" : "Cập nhật hóa đơn?")"
+                data-confirm-message="@(Model.Invoice is null ? $"Hóa đơn cho lịch #{Model.AppointmentId} sẽ được tạo và đánh dấu đã thanh toán." : $"Thông tin hóa đơn của lịch #{Model.AppointmentId} sẽ được cập nhật theo danh sách dịch vụ đang chọn.")"
+                data-confirm-text="@(Model.Invoice is null ? "Thanh toán" : "Cập nhật")"
+                data-confirm-style="primary">@(Model.Invoice is null ? "Xác nhận thanh toán" : "Cập nhật hóa đơn")</button>
+        @if (Model.Invoice is not null)
+        {
+            <a class="btn btn-outline-secondary"
+               asp-action="PrintInvoice"
+               asp-route-appointmentId="@Model.AppointmentId"
+               target="_blank"
+               rel="noopener">In / lưu PDF</a>
+        }
+    </div>
+</form>

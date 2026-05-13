@@ -1,0 +1,65 @@
+@model ClinicManagement.Models.Patient
+@{
+    ViewData["Title"] = Model.PatientId == 0 ? "Tạo hồ sơ bệnh nhân" : "Cập nhật bệnh nhân";
+    var returnUrl = ViewBag.ReturnUrl as string;
+    var backUrl = ViewBag.BackUrl as string ?? Url.Action("Patients");
+}
+
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">Tiếp nhận</p>
+        <h1>@ViewData["Title"]</h1>
+        <p>Cập nhật thông tin cơ bản để sử dụng trong quy trình đặt lịch và khám bệnh.</p>
+    </div>
+</section>
+
+<form asp-action="EditPatient" method="post" class="form-grid">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <input asp-for="PatientId" type="hidden" />
+    <input type="hidden" name="returnUrl" value="@returnUrl" />
+
+    <label class="form-label">
+        Họ tên
+        <input asp-for="FullName" class="form-control" />
+        <span asp-validation-for="FullName" class="text-danger"></span>
+    </label>
+
+    <label class="form-label">
+        Ngày sinh
+        <input asp-for="DateOfBirth" class="form-control" />
+        <span asp-validation-for="DateOfBirth" class="text-danger"></span>
+    </label>
+
+    <label class="form-label">
+        Giới tính
+        <input asp-for="Gender" class="form-control" />
+        <span asp-validation-for="Gender" class="text-danger"></span>
+    </label>
+
+    <label class="form-label">
+        Số điện thoại
+        <input asp-for="Phone" class="form-control" />
+        <span asp-validation-for="Phone" class="text-danger"></span>
+    </label>
+
+    <label class="form-label">
+        Địa chỉ
+        <input asp-for="Address" class="form-control" />
+        <span asp-validation-for="Address" class="text-danger"></span>
+    </label>
+
+    <label class="form-label">
+        CCCD/CMND
+        <input asp-for="IdentityNumber" class="form-control" />
+        <span asp-validation-for="IdentityNumber" class="text-danger"></span>
+    </label>
+
+    <div class="form-actions">
+        <button class="btn btn-primary" type="submit">Lưu hồ sơ</button>
+        <a class="btn btn-outline-secondary" href="@backUrl">Quay lại</a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,158 @@
+@model ClinicManagement.ViewModels.DoctorDirectoryViewModel
+@{
+    ViewData["Title"] = "Quản lý bác sĩ";
+    var filterRouteValues = new Dictionary<string, string?>
+    {
+        ["q"] = Model.Query,
+        ["departmentId"] = Model.DepartmentId?.ToString(),
+        ["status"] = Model.Status,
+        ["accountState"] = Model.AccountState,
+        ["sort"] = Model.Sort,
+        ["pageSize"] = Model.PageSize.ToString()
+    };
+    ClinicManagement.ViewModels.SortHeaderViewModel SortHeader(string label, string ascendingSort, string descendingSort) => new()
+    {
+        Label = label,
+        AscendingSort = ascendingSort,
+        DescendingSort = descendingSort,
+        CurrentSort = Model.Sort,
+        RouteValues = filterRouteValues
+    };
+    var pager = new ClinicManagement.ViewModels.PagerViewModel
+    {
+        Page = Model.Page,
+        TotalPages = Model.TotalPages,
+        TotalCount = Model.TotalCount,
+        StartItem = Model.StartItem,
+        EndItem = Model.EndItem,
+        Pages = Model.GetVisiblePages(),
+        RouteValues = new Dictionary<string, string?>(filterRouteValues)
+    };
+}
+
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">Quản trị viên</p>
+        <h1>Quản lý bác sĩ và lịch làm việc</h1>
+    </div>
+    <a class="btn btn-primary" asp-action="EditDoctor">Thêm bác sĩ</a>
+</section>
+
+<form method="get" class="filter-toolbar">
+    <input type="hidden" name="sort" value="@Model.Sort" />
+    <label class="form-label filter-field-wide">
+        Tìm kiếm
+        <input name="q" value="@Model.Query" class="form-control" placeholder="Tên bác sĩ, khoa, liên hệ hoặc username" />
+    </label>
+    <label class="form-label">
+        Chuyên khoa
+        <select name="departmentId" class="form-select">
+            <option value="">Tất cả chuyên khoa</option>
+            @foreach (var department in Model.Departments)
+            {
+                <option value="@department.DepartmentId" selected="@(Model.DepartmentId == department.DepartmentId ? "selected" : null)">@department.DepartmentName</option>
+            }
+        </select>
+    </label>
+    <label class="form-label">
+        Trạng thái
+        <select name="status" class="form-select">
+            <option value="">Tất cả trạng thái</option>
+            <option value="active" selected="@(Model.Status == "active" ? "selected" : null)">Hoạt động</option>
+            <option value="inactive" selected="@(Model.Status == "inactive" ? "selected" : null)">Tạm ngưng</option>
+        </select>
+    </label>
+    <label class="form-label">
+        Tài khoản
+        <select name="accountState" class="form-select">
+            <option value="">Tất cả</option>
+            <option value="linked" selected="@(Model.AccountState == "linked" ? "selected" : null)">Đã liên kết</option>
+            <option value="unlinked" selected="@(Model.AccountState == "unlinked" ? "selected" : null)">Chưa có tài khoản</option>
+            <option value="temporary" selected="@(Model.AccountState == "temporary" ? "selected" : null)">Mật khẩu tạm thời</option>
+        </select>
+    </label>
+    <label class="form-label">
+        Mỗi trang
+        <select name="pageSize" class="form-select">
+            @foreach (var option in Model.PageSizeOptions)
+            {
+                <option value="@option" selected="@(Model.PageSize == option ? "selected" : null)">@option bản ghi</option>
+            }
+        </select>
+    </label>
+    <div class="filter-actions">
+        <button class="btn btn-primary" type="submit">Áp dụng</button>
+        <a class="btn btn-outline-secondary" asp-action="Doctors">Bỏ lọc</a>
+    </div>
+</form>
+
+@if (!Model.Items.Any())
+{
+    <div class="empty-state">
+        <h1>Không có bác sĩ phù hợp</h1>
+        <p>Hãy thử đổi điều kiện lọc hoặc tạo thêm hồ sơ bác sĩ mới.</p>
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th>@await Html.PartialAsync("_SortHeader", SortHeader("Bác sĩ", "name", "name_desc"))</th>
+                    <th>@await Html.PartialAsync("_SortHeader", SortHeader("Khoa", "department", "department_desc"))</th>
+                    <th>Liên hệ</th>
+                    <th>@await Html.PartialAsync("_SortHeader", SortHeader("Tài khoản", "account", "account_desc"))</th>
+                    <th>@await Html.PartialAsync("_SortHeader", SortHeader("Trạng thái", "status", "status_desc"))</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var item in Model.Items)
+            {
+                <tr>
+                    <td>@item.Doctor.FullName</td>
+                    <td>@item.Department.DepartmentName</td>
+                    <td>@item.Doctor.Phone<br /><span class="text-muted">@item.Doctor.Email</span></td>
+                    <td>
+                        @if (item.LinkedUser is null)
+                        {
+                            <span class="text-danger">Chưa có tài khoản</span>
+                        }
+                        else
+                        {
+                            <div>@item.LinkedUser.Username</div>
+                            <div class="text-muted">@(item.LinkedUser.MustChangePassword ? "Mật khẩu tạm thời" : "Đã kích hoạt")</div>
+                        }
+                    </td>
+                    <td><span class="badge @(item.Doctor.IsActive ? "bg-success" : "bg-secondary")">@(item.Doctor.IsActive ? "Hoạt động" : "Tạm ngưng")</span></td>
+                    <td class="text-end action-stack">
+                        <a class="btn btn-outline-primary btn-sm" asp-action="EditDoctor" asp-route-id="@item.Doctor.DoctorId">Sửa</a>
+                        <a class="btn btn-outline-info btn-sm" asp-action="Schedule" asp-route-id="@item.Doctor.DoctorId">Lịch</a>
+                        @if (item.LinkedUser is null)
+                        {
+                            <a class="btn btn-outline-success btn-sm" asp-action="EditUser" asp-route-doctorId="@item.Doctor.DoctorId">Tạo TK</a>
+                        }
+                        else
+                        {
+                            <a class="btn btn-outline-secondary btn-sm" asp-action="EditUser" asp-route-id="@item.LinkedUser.UserId">Tài khoản</a>
+                        }
+                        <form asp-action="ToggleDoctor" method="post" class="d-inline">
+                            <input type="hidden" name="id" value="@item.Doctor.DoctorId" />
+                            <button class="btn btn-outline-warning btn-sm"
+                                    type="submit"
+                                    data-confirm-modal="true"
+                                    data-confirm-title="@(item.Doctor.IsActive ? "Ngưng hoạt động bác sĩ?" : "Mở lại bác sĩ?")"
+                                    data-confirm-message="@(item.Doctor.IsActive ? $"Bác sĩ {item.Doctor.FullName} sẽ tạm ngưng tiếp nhận lịch mới." : $"Bác sĩ {item.Doctor.FullName} sẽ được mở lại để nhận lịch khám.")"
+                                    data-confirm-text="@(item.Doctor.IsActive ? "Ngưng" : "Mở")"
+                                    data-confirm-style="warning">@(item.Doctor.IsActive ? "Ngưng" : "Mở")</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+
+    <partial name="_ListPager" model="pager" />
+}

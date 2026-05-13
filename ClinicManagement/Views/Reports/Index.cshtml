@@ -1,0 +1,236 @@
+@model ClinicManagement.ViewModels.ReportsViewModel
+@{
+    ViewData["Title"] = "Thống kê";
+    var summaries = Model.DepartmentSummaries.ToList();
+    var results = Model.Results.ToList();
+    var filterRouteValues = new Dictionary<string, string?>
+    {
+        ["fromDate"] = Model.FromDate?.ToString("yyyy-MM-dd"),
+        ["toDate"] = Model.ToDate?.ToString("yyyy-MM-dd"),
+        ["departmentId"] = Model.DepartmentId?.ToString(),
+        ["rangePreset"] = Model.RangePreset,
+        ["sort"] = Model.Sort,
+        ["pageSize"] = Model.PageSize.ToString()
+    };
+    ClinicManagement.ViewModels.SortHeaderViewModel SortHeader(string label, string ascendingSort, string descendingSort) => new()
+    {
+        Label = label,
+        AscendingSort = ascendingSort,
+        DescendingSort = descendingSort,
+        CurrentSort = Model.Sort,
+        RouteValues = filterRouteValues
+    };
+    var pager = new ClinicManagement.ViewModels.PagerViewModel
+    {
+        Page = Model.Page,
+        TotalPages = Model.TotalPages,
+        TotalCount = Model.TotalCount,
+        StartItem = Model.StartItem,
+        EndItem = Model.EndItem,
+        Pages = Model.GetVisiblePages(),
+        RouteValues = new Dictionary<string, string?>(filterRouteValues)
+    };
+}
+
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">Báo cáo</p>
+        <h1>Thống kê hoạt động phòng khám</h1>
+        <p class="dashboard-subtitle">Lọc theo thời gian và chuyên khoa để xem ngay khối lượng khám bệnh, doanh thu và các ca cần theo dõi.</p>
+    </div>
+</section>
+
+<nav class="range-preset-bar" aria-label="Chọn nhanh khoảng thời gian">
+    @foreach (var preset in Model.RangePresets)
+    {
+        if (preset.Value == "custom")
+        {
+            <span class="range-preset-link @(Model.RangePreset == preset.Value ? "is-active" : string.Empty)">@preset.Label</span>
+            continue;
+        }
+
+        <a class="range-preset-link @(Model.RangePreset == preset.Value ? "is-active" : string.Empty)"
+           asp-action="Index"
+           asp-route-rangePreset="@preset.Value"
+           asp-route-departmentId="@Model.DepartmentId">@preset.Label</a>
+    }
+</nav>
+
+<form method="get" class="history-filter" data-quick-range-form="true">
+    <input type="hidden" name="rangePreset" value="@Model.RangePreset" data-range-preset-input="true" />
+    <input type="hidden" name="sort" value="@Model.Sort" />
+    <div>
+        <label class="form-label" asp-for="FromDate">Từ ngày</label>
+        <input asp-for="FromDate" class="form-control" type="date" />
+    </div>
+    <div>
+        <label class="form-label" asp-for="ToDate">Đến ngày</label>
+        <input asp-for="ToDate" class="form-control" type="date" />
+    </div>
+    <div>
+        <label class="form-label" asp-for="DepartmentId">Chuyên khoa</label>
+        <select asp-for="DepartmentId" class="form-select">
+            <option value="">Tất cả chuyên khoa</option>
+            @foreach (var department in Model.Departments)
+            {
+                <option value="@department.DepartmentId">@department.DepartmentName</option>
+            }
+        </select>
+    </div>
+    <div>
+        <label class="form-label" asp-for="PageSize">Mỗi trang</label>
+        <select asp-for="PageSize" class="form-select">
+            @foreach (var option in Model.PageSizeOptions)
+            {
+                <option value="@option" selected="@(Model.PageSize == option ? "selected" : null)">@option bản ghi</option>
+            }
+        </select>
+    </div>
+    <button class="btn btn-primary" type="submit">Lọc báo cáo</button>
+</form>
+
+@if (Model.DisplayedFromDate is not null && Model.DisplayedToDate is not null)
+{
+    <section class="summary-box range-summary">
+        <span>Khoảng thời gian đã được điền sẵn trong bộ lọc</span>
+        <strong>@Model.TotalAppointments lịch khám trong phạm vi báo cáo hiện tại</strong>
+        <small>Bạn có thể chỉnh ngày ngay trên form lọc để thay đổi phạm vi thống kê.</small>
+    </section>
+}
+
+<div class="stat-grid">
+    <div class="stat-card">
+        <span>Tổng lịch khám</span>
+        <strong>@Model.TotalAppointments</strong>
+        <small>Số lịch nằm trong bộ lọc hiện tại.</small>
+    </div>
+    <div class="stat-card">
+        <span>Đã hoàn tất</span>
+        <strong>@Model.CompletedCount</strong>
+        <small>Số ca đã được bác sĩ cập nhật kết quả khám.</small>
+    </div>
+    <div class="stat-card">
+        <span>Đã hủy</span>
+        <strong>@Model.CancelledCount</strong>
+        <small>Số lịch đã hủy trong giai đoạn đang xem.</small>
+    </div>
+    <div class="stat-card">
+        <span>Cần thanh toán</span>
+        <strong>@Model.WaitingPaymentCount</strong>
+        <small>Lịch đã khám xong nhưng chưa thanh toán xong.</small>
+    </div>
+    <div class="stat-card">
+        <span>Doanh thu</span>
+        <strong>@Model.Revenue.ToString("N0") đ</strong>
+        <small>Chỉ tính hóa đơn đã thanh toán trong bộ lọc hiện tại.</small>
+    </div>
+</div>
+
+@if (Model.TrendCharts.Any())
+{
+    <section class="chart-grid">
+        @foreach (var chart in Model.TrendCharts)
+        {
+            <partial name="_LineChart" model="chart" />
+        }
+    </section>
+}
+
+<h2 class="section-title">Tổng hợp theo chuyên khoa</h2>
+@if (summaries.Any())
+{
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+            <tr>
+                <th>Chuyên khoa</th>
+                <th>Tổng lịch</th>
+                <th>Hoàn tất</th>
+                <th>Đã hủy</th>
+                <th>Doanh thu</th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (var item in summaries)
+            {
+                <tr>
+                    <td>@item.DepartmentName</td>
+                    <td>@item.AppointmentCount</td>
+                    <td>@item.CompletedCount</td>
+                    <td>@item.CancelledCount</td>
+                    <td>@item.Revenue.ToString("N0") đ</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="report-bars mt-3">
+        @foreach (var item in summaries)
+        {
+            <div>
+                <span>@item.DepartmentName</span>
+                <strong>@item.AppointmentCount</strong>
+                <meter min="0" max="@Math.Max(1, Model.TotalAppointments)" value="@item.AppointmentCount"></meter>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <section class="empty-state">
+        <h2>Không có dữ liệu để tổng hợp</h2>
+        <p class="mb-0">Hãy đổi bộ lọc thời gian hoặc chuyên khoa để xem thêm số liệu.</p>
+    </section>
+}
+
+<h2 class="section-title">Danh sách lịch khám trong bộ lọc</h2>
+@if (results.Any())
+{
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+            <tr>
+                <th>Mã</th>
+                <th>@await Html.PartialAsync("_SortHeader", SortHeader("Bệnh nhân", "patient", "patient_desc"))</th>
+                <th>@await Html.PartialAsync("_SortHeader", SortHeader("Bác sĩ", "doctor", "doctor_desc"))</th>
+                <th>Chuyên khoa</th>
+                <th>@await Html.PartialAsync("_SortHeader", SortHeader("Ngày", "date", "date_desc"))</th>
+                <th>Giờ</th>
+                <th>@await Html.PartialAsync("_SortHeader", SortHeader("Trạng thái", "status", "status_desc"))</th>
+                <th>@await Html.PartialAsync("_SortHeader", SortHeader("Thanh toán", "payment", "payment_desc"))</th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (var item in results)
+            {
+                <tr>
+                    <td>#@item.Appointment.AppointmentId</td>
+                    <td>@item.Patient.FullName</td>
+                    <td>@item.Doctor.FullName</td>
+                    <td>@item.Department.DepartmentName</td>
+                    <td>@item.Appointment.AppointmentDate.ToString("dd/MM/yyyy")</td>
+                    <td>@item.Appointment.TimeSlot</td>
+                    <td>@DisplayText.AppointmentStatus(item.Appointment.Status)</td>
+                    <td>
+                        @if (item.Invoice?.PaymentStatus == ClinicManagement.Models.PaymentStatus.Paid)
+                        {
+                            <span>@item.Invoice.TotalAmount.ToString("N0") đ</span>
+                        }
+                        else if (item.Appointment.Status == ClinicManagement.Models.AppointmentStatus.Completed)
+                        {
+                            <span>Cần thanh toán</span>
+                        }
+                        else
+                        {
+                            <span>Chưa phát sinh</span>
+                        }
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+
+    <partial name="_ListPager" model="pager" />
+}

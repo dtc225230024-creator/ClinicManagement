@@ -1,0 +1,188 @@
+@using ClinicManagement.Models
+@inject ClinicManagement.Services.ClinicStore LayoutStore
+@inject ClinicManagement.Services.UserManualService ManualService
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - ClinicCare AI</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/ClinicManagement.styles.css" asp-append-version="true" />
+</head>
+@{
+    string? currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+    string? currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+    ClinicManagement.ViewModels.UserManualViewModel? userManual = null;
+    var manualUserIdValue = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    if (User.Identity?.IsAuthenticated == true && int.TryParse(manualUserIdValue, out var manualUserId))
+    {
+        var manualUser = LayoutStore.GetUserForSession(manualUserId);
+        if (manualUser is not null && Enum.TryParse<UserRole>(User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value, out var manualRole))
+        {
+            userManual = ManualService.Build(manualRole, ManualService.ShouldShow(manualUser));
+        }
+    }
+
+    bool IsNavActive(string controller, params string[] actions)
+    {
+        if (!string.Equals(currentController, controller, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (actions.Length == 0)
+        {
+            return true;
+        }
+
+        foreach (var action in actions)
+        {
+            if (string.Equals(currentAction, action, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    string NavLinkClass(string controller, params string[] actions)
+        => $"nav-link app-nav-link{(IsNavActive(controller, actions) ? " is-active" : string.Empty)}";
+}
+<body>
+    <header class="app-header">
+        <nav class="navbar navbar-expand-lg navbar-light app-navbar">
+            <div class="container-fluid app-navbar-inner">
+                <a class="navbar-brand fw-bold app-brand" asp-controller="Home" asp-action="Index">ClinicCare AI</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+                        aria-expanded="false" aria-label="Mở menu điều hướng">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="navbar-collapse collapse d-lg-inline-flex justify-content-between">
+                    <ul class="navbar-nav flex-grow-1 app-nav-list">
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <li class="nav-item"><a class="@NavLinkClass("Home", "Index")" asp-controller="Home" asp-action="Index">Tổng quan</a></li>
+                            @if (User.IsInRole("Admin"))
+                            {
+                                <li class="nav-item"><a class="@NavLinkClass("Admin", "Users", "EditUser")" asp-controller="Admin" asp-action="Users">Tài khoản</a></li>
+                                <li class="nav-item"><a class="@NavLinkClass("Admin", "Doctors", "EditDoctor", "Schedule")" asp-controller="Admin" asp-action="Doctors">Bác sĩ</a></li>
+                                <li class="nav-item"><a class="@NavLinkClass("Admin", "Departments", "EditDepartment")" asp-controller="Admin" asp-action="Departments">Chuyên khoa</a></li>
+                                <li class="nav-item"><a class="@NavLinkClass("Admin", "AiRules", "EditAiRule")" asp-controller="Admin" asp-action="AiRules">Luật AI</a></li>
+                                <li class="nav-item"><a class="@NavLinkClass("Admin", "Services", "EditService")" asp-controller="Admin" asp-action="Services">Dịch vụ</a></li>
+                                <li class="nav-item"><a class="@NavLinkClass("Reception", "Appointments", "Invoice", "PrintInvoice", "Reschedule")" asp-controller="Reception" asp-action="Appointments">Lịch khám</a></li>
+                                <li class="nav-item"><a class="@NavLinkClass("Reports", "Index")" asp-controller="Reports" asp-action="Index">Thống kê</a></li>
+                            }
+                            @if (User.IsInRole("Receptionist"))
+                            {
+                                <li class="nav-item"><a class="@NavLinkClass("Reception", "Patients", "EditPatient")" asp-controller="Reception" asp-action="Patients">Bệnh nhân</a></li>
+                                <li class="nav-item"><a class="@NavLinkClass("Reception", "CreateAppointment")" asp-controller="Reception" asp-action="CreateAppointment">Đặt lịch AI</a></li>
+                                <li class="nav-item"><a class="@NavLinkClass("Reception", "Appointments", "Invoice", "PrintInvoice", "Reschedule")" asp-controller="Reception" asp-action="Appointments">Lịch khám</a></li>
+                            }
+                            @if (User.IsInRole("Doctor"))
+                            {
+                                <li class="nav-item"><a class="@NavLinkClass("Doctor", "Schedule", "Details", "MedicalRecord")" asp-controller="Doctor" asp-action="Schedule">Lịch cá nhân</a></li>
+                            }
+                            <li class="nav-item"><a class="@NavLinkClass("Records", "Index", "Details")" asp-controller="Records" asp-action="Index">Hồ sơ khám</a></li>
+                        }
+                    </ul>
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <div class="d-flex align-items-center gap-2 app-account-actions">
+                            <span class="app-user-pill">@User.Identity.Name</span>
+                            @if (userManual is not null)
+                            {
+                                <button class="btn btn-outline-primary btn-sm" type="button" data-user-manual-open="true">Hỗ trợ</button>
+                            }
+                            <a class="btn btn-outline-primary btn-sm" asp-controller="Auth" asp-action="ChangePassword">Đổi mật khẩu</a>
+                            <form asp-controller="Auth" asp-action="Logout" method="post" class="m-0">
+                                <button class="btn btn-outline-danger btn-sm"
+                                        type="submit"
+                                        data-confirm-modal="true"
+                                        data-confirm-title="Đăng xuất?"
+                                        data-confirm-message="Phiên làm việc hiện tại sẽ kết thúc. Bạn có chắc muốn đăng xuất?"
+                                        data-confirm-text="Đăng xuất"
+                                        data-confirm-style="danger">Đăng xuất</button>
+                            </form>
+                        </div>
+                    }
+                </div>
+            </div>
+        </nav>
+    </header>
+    @if (TempData["Message"] is not null || TempData["Error"] is not null)
+    {
+        <div class="toast-container toast-stack position-fixed top-0 end-0 p-3">
+            @if (TempData["Message"] is not null)
+            {
+                <div class="toast app-toast border-0 text-bg-success"
+                     role="status"
+                     aria-live="polite"
+                     aria-atomic="true"
+                     data-auto-show="true"
+                     data-bs-autohide="true"
+                     data-bs-delay="3200">
+                    <div class="d-flex">
+                        <div class="toast-body">@TempData["Message"]</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Đóng"></button>
+                    </div>
+                </div>
+            }
+            @if (TempData["Error"] is not null)
+            {
+                <div class="toast app-toast border-0 text-bg-danger"
+                     role="alert"
+                     aria-live="assertive"
+                     aria-atomic="true"
+                     data-auto-show="true"
+                     data-bs-autohide="true"
+                     data-bs-delay="4800">
+                    <div class="d-flex">
+                        <div class="toast-body">@TempData["Error"]</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Đóng"></button>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    <div class="container">
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer class="app-footer">
+        <div class="container app-footer-inner">
+            <span class="app-footer-brand">ClinicCare AI</span>
+            <span class="app-footer-meta">&copy; @DateTime.Now.Year</span>
+        </div>
+    </footer>
+    @if (userManual is not null)
+    {
+        <partial name="_UserManualModal" model="userManual" />
+    }
+    <div class="modal fade" id="confirmationModal" tabindex="-1" aria-labelledby="confirmationModalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="confirmationModalTitle">Xác nhận thao tác</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="confirmation-modal-message mb-0" id="confirmationModalMessage">Bạn có chắc muốn tiếp tục?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Không</button>
+                    <button type="button" class="btn btn-danger" id="confirmationModalSubmit">Xác nhận</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
