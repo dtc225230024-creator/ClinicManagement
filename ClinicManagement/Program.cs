@@ -174,17 +174,22 @@ namespace ClinicManagement
 
         private static string BuildMySqlConnectionString(IConfiguration configuration, IWebHostEnvironment environment)
         {
-            var railwayUrl = FirstConfiguredValue(
+            var railwayUrl = GetConfiguredOrEnvironmentValue(
                 configuration,
                 "MYSQL_URL",
                 "DATABASE_URL",
                 "MYSQL_PRIVATE_URL",
                 "MYSQL_PUBLIC_URL");
-            railwayUrl = NormalizeEnvironmentValue(railwayUrl);
 
-            if (!string.IsNullOrWhiteSpace(railwayUrl) &&
-                Uri.TryCreate(railwayUrl, UriKind.Absolute, out var mysqlUri))
+            if (!string.IsNullOrWhiteSpace(railwayUrl))
             {
+                if (!Uri.TryCreate(railwayUrl, UriKind.Absolute, out var mysqlUri))
+                {
+                    throw new InvalidOperationException(
+                        "MYSQL_URL is present but is not a valid absolute MySQL URL. " +
+                        BuildEnvironmentDiagnostics(configuration));
+                }
+
                 var userInfo = mysqlUri.UserInfo.Split(':', 2);
                 return BuildMySqlConnectionString(
                     mysqlUri.Host,
@@ -194,15 +199,15 @@ namespace ClinicManagement
                     mysqlUri.AbsolutePath.Trim('/'));
             }
 
-            var mysqlHost = NormalizeEnvironmentValue(configuration["MYSQLHOST"]);
+            var mysqlHost = GetConfiguredOrEnvironmentValue(configuration, "MYSQLHOST");
             if (!string.IsNullOrWhiteSpace(mysqlHost))
             {
                 return BuildMySqlConnectionString(
                     mysqlHost,
-                    NormalizeEnvironmentValue(configuration["MYSQLPORT"]) ?? "3306",
-                    NormalizeEnvironmentValue(configuration["MYSQLUSER"]) ?? string.Empty,
-                    NormalizeEnvironmentValue(configuration["MYSQLPASSWORD"]) ?? string.Empty,
-                    NormalizeEnvironmentValue(configuration["MYSQLDATABASE"]) ?? string.Empty);
+                    GetConfiguredOrEnvironmentValue(configuration, "MYSQLPORT") ?? "3306",
+                    GetConfiguredOrEnvironmentValue(configuration, "MYSQLUSER") ?? string.Empty,
+                    GetConfiguredOrEnvironmentValue(configuration, "MYSQLPASSWORD") ?? string.Empty,
+                    GetConfiguredOrEnvironmentValue(configuration, "MYSQLDATABASE") ?? string.Empty);
             }
 
             if (IsHostedProduction(configuration, environment))
@@ -216,11 +221,24 @@ namespace ClinicManagement
                    ?? throw new InvalidOperationException("Missing MySQL connection configuration.");
         }
 
-        private static string? FirstConfiguredValue(IConfiguration configuration, params string[] keys)
+        private static string? GetConfiguredOrEnvironmentValue(IConfiguration configuration, params string[] keys)
         {
-            return keys
-                .Select(key => configuration[key])
-                .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
+            foreach (var key in keys)
+            {
+                var configValue = NormalizeEnvironmentValue(configuration[key]);
+                if (!string.IsNullOrWhiteSpace(configValue))
+                {
+                    return configValue;
+                }
+
+                var environmentValue = NormalizeEnvironmentValue(Environment.GetEnvironmentVariable(key));
+                if (!string.IsNullOrWhiteSpace(environmentValue))
+                {
+                    return environmentValue;
+                }
+            }
+
+            return null;
         }
 
         private static string? NormalizeEnvironmentValue(string? value)
@@ -254,17 +272,36 @@ namespace ClinicManagement
 
             var states = keys.Select(key =>
             {
-                var value = configuration[key];
+                var configValue = configuration[key];
+                var directValue = Environment.GetEnvironmentVariable(key);
+                var value = !string.IsNullOrWhiteSpace(configValue) ? configValue : directValue;
                 var state = value is null
                     ? "missing"
                     : string.IsNullOrWhiteSpace(value)
                         ? "empty"
                         : $"present(len={value.Length})";
 
-                return $"{key}={state}";
+                var source = !string.IsNullOrWhiteSpace(configValue)
+                    ? "config"
+                    : directValue is null
+                        ? "none"
+                        : "env";
+
+                return $"{key}={state},source={source}";
             });
 
-            return $"Detected variables: {string.Join(", ", states)}.";
+            var mysqlEnvironmentKeys = Environment.GetEnvironmentVariables()
+                .Keys
+                .OfType<string>()
+                .Where(key => key.Contains("MYSQL", StringComparison.OrdinalIgnoreCase))
+                .OrderBy(key => key)
+                .ToArray();
+
+            var mysqlKeyList = mysqlEnvironmentKeys.Length == 0
+                ? "none"
+                : string.Join("|", mysqlEnvironmentKeys);
+
+            return $"Detected variables: {string.Join(", ", states)}. Environment keys containing MYSQL: {mysqlKeyList}.";
         }
 
         private static bool IsHostedProduction(IConfiguration configuration, IWebHostEnvironment environment)
