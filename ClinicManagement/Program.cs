@@ -180,6 +180,7 @@ namespace ClinicManagement
                 "DATABASE_URL",
                 "MYSQL_PRIVATE_URL",
                 "MYSQL_PUBLIC_URL");
+            railwayUrl = NormalizeEnvironmentValue(railwayUrl);
 
             if (!string.IsNullOrWhiteSpace(railwayUrl) &&
                 Uri.TryCreate(railwayUrl, UriKind.Absolute, out var mysqlUri))
@@ -193,21 +194,22 @@ namespace ClinicManagement
                     mysqlUri.AbsolutePath.Trim('/'));
             }
 
-            var mysqlHost = configuration["MYSQLHOST"];
+            var mysqlHost = NormalizeEnvironmentValue(configuration["MYSQLHOST"]);
             if (!string.IsNullOrWhiteSpace(mysqlHost))
             {
                 return BuildMySqlConnectionString(
                     mysqlHost,
-                    configuration["MYSQLPORT"] ?? "3306",
-                    configuration["MYSQLUSER"] ?? string.Empty,
-                    configuration["MYSQLPASSWORD"] ?? string.Empty,
-                    configuration["MYSQLDATABASE"] ?? string.Empty);
+                    NormalizeEnvironmentValue(configuration["MYSQLPORT"]) ?? "3306",
+                    NormalizeEnvironmentValue(configuration["MYSQLUSER"]) ?? string.Empty,
+                    NormalizeEnvironmentValue(configuration["MYSQLPASSWORD"]) ?? string.Empty,
+                    NormalizeEnvironmentValue(configuration["MYSQLDATABASE"]) ?? string.Empty);
             }
 
             if (IsHostedProduction(configuration, environment))
             {
                 throw new InvalidOperationException(
-                    "Missing Railway MySQL configuration. In the web service Variables tab, add MYSQLHOST, MYSQLPORT, MYSQLUSER, MYSQLPASSWORD and MYSQLDATABASE from the MySQL service, or add MYSQL_URL.");
+                    "Missing Railway MySQL configuration. In the web service Variables tab, add MYSQLHOST, MYSQLPORT, MYSQLUSER, MYSQLPASSWORD and MYSQLDATABASE from the MySQL service, or add MYSQL_URL. " +
+                    BuildEnvironmentDiagnostics(configuration));
             }
 
             return configuration.GetConnectionString("DefaultConnection")
@@ -219,6 +221,50 @@ namespace ClinicManagement
             return keys
                 .Select(key => configuration[key])
                 .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
+        }
+
+        private static string? NormalizeEnvironmentValue(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return value;
+            }
+
+            return value.Trim().Trim('"');
+        }
+
+        private static string BuildEnvironmentDiagnostics(IConfiguration configuration)
+        {
+            var keys = new[]
+            {
+                "ASPNETCORE_ENVIRONMENT",
+                "RAILWAY_ENVIRONMENT",
+                "RAILWAY_PROJECT_ID",
+                "RAILWAY_SERVICE_ID",
+                "MYSQL_URL",
+                "DATABASE_URL",
+                "MYSQL_PRIVATE_URL",
+                "MYSQL_PUBLIC_URL",
+                "MYSQLHOST",
+                "MYSQLPORT",
+                "MYSQLUSER",
+                "MYSQLPASSWORD",
+                "MYSQLDATABASE"
+            };
+
+            var states = keys.Select(key =>
+            {
+                var value = configuration[key];
+                var state = value is null
+                    ? "missing"
+                    : string.IsNullOrWhiteSpace(value)
+                        ? "empty"
+                        : $"present(len={value.Length})";
+
+                return $"{key}={state}";
+            });
+
+            return $"Detected variables: {string.Join(", ", states)}.";
         }
 
         private static bool IsHostedProduction(IConfiguration configuration, IWebHostEnvironment environment)
@@ -236,6 +282,12 @@ namespace ClinicManagement
             string password,
             string database)
         {
+            host = NormalizeEnvironmentValue(host) ?? string.Empty;
+            port = NormalizeEnvironmentValue(port) ?? string.Empty;
+            user = NormalizeEnvironmentValue(user) ?? string.Empty;
+            password = NormalizeEnvironmentValue(password) ?? string.Empty;
+            database = NormalizeEnvironmentValue(database) ?? string.Empty;
+
             if (string.IsNullOrWhiteSpace(host) ||
                 string.IsNullOrWhiteSpace(user) ||
                 string.IsNullOrWhiteSpace(database))
