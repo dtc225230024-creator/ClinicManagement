@@ -13,6 +13,22 @@ namespace ClinicManagement
     {
         public static void Main(string[] args)
         {
+            try
+            {
+                Run(args);
+            }
+            catch (Exception ex) when (IsRailwayRuntime())
+            {
+                Console.Error.WriteLine(BuildConciseStartupError(ex));
+
+                // Slow Railway crash loops so one bad startup does not flood deployment logs.
+                System.Threading.Thread.Sleep(TimeSpan.FromSeconds(20));
+                Environment.ExitCode = 1;
+            }
+        }
+
+        private static void Run(string[] args)
+        {
             var builder = WebApplication.CreateBuilder(args);
             var port = builder.Configuration["PORT"];
             if (!string.IsNullOrWhiteSpace(port))
@@ -115,6 +131,24 @@ namespace ClinicManagement
                 pattern: "{controller=Home}/{action=Index}/{id?}");
 
             app.Run();
+        }
+
+        private static bool IsRailwayRuntime()
+        {
+            return !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("RAILWAY_ENVIRONMENT")) ||
+                   !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("RAILWAY_PROJECT_ID")) ||
+                   !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("RAILWAY_SERVICE_ID"));
+        }
+
+        private static string BuildConciseStartupError(Exception exception)
+        {
+            var messages = new List<string>();
+            for (var current = exception; current is not null; current = current.InnerException)
+            {
+                messages.Add($"{current.GetType().Name}: {current.Message}");
+            }
+
+            return "Application startup failed. " + string.Join(" | Inner: ", messages);
         }
 
         private static async Task ValidatePrincipalAsync(CookieValidatePrincipalContext context)
