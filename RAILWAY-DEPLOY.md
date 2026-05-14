@@ -28,6 +28,7 @@ Project da duoc chuan bi de deploy len Railway:
 5. Railway se tu nhan `Dockerfile` va build app.
 6. Trong web service, them/cau hinh bien moi truong:
    - `ASPNETCORE_ENVIRONMENT=Production`
+   - `TZ=Asia/Ho_Chi_Minh`
    - `MYSQLHOST`
    - `MYSQLPORT`
    - `MYSQLUSER`
