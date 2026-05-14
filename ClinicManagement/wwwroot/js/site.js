@@ -294,24 +294,30 @@
     }
 
     const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
-
-    document.querySelectorAll("[data-user-manual-open='true']").forEach(button => {
-        button.addEventListener("click", () => modal.show());
-    });
-
-    if (modalElement.dataset.showOnLoad === "true") {
+    const showManualModal = (attempt = 0) => {
         modal.show();
+
         window.setTimeout(() => {
             const dialog = modalElement.querySelector(".modal-dialog");
             const rect = dialog?.getBoundingClientRect();
-            if (!rect || rect.width <= 0 || rect.height <= 0) {
+            const isVisible = modalElement.classList.contains("show") &&
+                rect &&
+                rect.width > 0 &&
+                rect.height > 0;
+
+            if (!isVisible && attempt < 2) {
                 modal.hide();
-                document.querySelectorAll(".modal-backdrop").forEach(backdrop => backdrop.remove());
-                document.body.classList.remove("modal-open");
-                document.body.style.removeProperty("overflow");
-                document.body.style.removeProperty("padding-right");
+                window.setTimeout(() => showManualModal(attempt + 1), 180);
             }
         }, 300);
+    };
+
+    document.querySelectorAll("[data-user-manual-open='true']").forEach(button => {
+        button.addEventListener("click", () => showManualModal());
+    });
+
+    if (modalElement.dataset.showOnLoad === "true") {
+        window.setTimeout(() => showManualModal(), 160);
     }
 
     document.querySelectorAll("[data-user-manual-seen-form='true']").forEach(form => {

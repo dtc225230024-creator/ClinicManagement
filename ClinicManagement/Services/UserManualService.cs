@@ -5,7 +5,7 @@ namespace ClinicManagement.Services;
 
 public class UserManualService
 {
-    public const string CurrentVersion = "2026.05";
+    public const string CurrentVersion = "2026.05.14";
 
     public bool ShouldShow(UserAccount user)
     {

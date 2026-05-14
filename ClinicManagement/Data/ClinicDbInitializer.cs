@@ -150,6 +150,7 @@ public static class ClinicDbInitializer
         EnsureAppointments(db);
         EnsureVietnameseDemoDataText(db);
         EnsureAnalyticsDemoData(db);
+        RefreshDemoTimeline(db);
         EnsureMedicalRecordsAndInvoices(db);
     }
 
@@ -607,6 +608,201 @@ public static class ClinicDbInitializer
         }
 
         db.SaveChanges();
+    }
+
+    private static void RefreshDemoTimeline(ClinicDbContext db)
+    {
+        var today = DateTime.Today;
+        var changed = false;
+        var recordAppointmentIds = db.MedicalRecords
+            .Select(x => x.AppointmentId)
+            .ToHashSet();
+        var invoiceAppointmentIds = db.Invoices
+            .Select(x => x.AppointmentId)
+            .ToHashSet();
+        var appointmentsWithCompletedData = recordAppointmentIds
+            .Concat(invoiceAppointmentIds)
+            .ToHashSet();
+        var refreshedAppointmentIds = new HashSet<int>();
+
+        changed |= RefreshGeneralDemoAppointments(db, today, appointmentsWithCompletedData, refreshedAppointmentIds);
+        changed |= RefreshAnalyticsDemoAppointments(db, today, refreshedAppointmentIds);
+        changed |= RefreshDemoDependentDates(db, refreshedAppointmentIds);
+
+        if (changed)
+        {
+            db.SaveChanges();
+        }
+    }
+
+    private static bool RefreshGeneralDemoAppointments(
+        ClinicDbContext db,
+        DateTime today,
+        HashSet<int> appointmentsWithCompletedData,
+        HashSet<int> refreshedAppointmentIds)
+    {
+        var changed = false;
+        var seedReasons = ReasonTemplates.ToHashSet(StringComparer.Ordinal);
+        var demoAppointments = db.Appointments
+            .AsEnumerable()
+            .Where(x => x.Reason != null &&
+                        seedReasons.Contains(x.Reason) &&
+                        x.CreatedAt.Date == x.AppointmentDate.Date.AddDays(-1))
+            .OrderBy(x => x.AppointmentId)
+            .ToList();
+
+        for (var index = 0; index < demoAppointments.Count; index++)
+        {
+            var appointment = demoAppointments[index];
+            var hasCompletedData = appointmentsWithCompletedData.Contains(appointment.AppointmentId);
+            var targetDate = hasCompletedData
+                ? today.AddDays(-1 - index % 10).Date
+                : today.AddDays(index % 22).Date;
+            var targetStatus = hasCompletedData
+                ? AppointmentStatus.Completed
+                : index % 7 == 0
+                    ? AppointmentStatus.Cancelled
+                    : AppointmentStatus.Scheduled;
+            var targetCreatedAt = targetDate.AddDays(-1);
+
+            changed |= ApplyAppointmentTimeline(appointment, targetDate, targetStatus, targetCreatedAt);
+            refreshedAppointmentIds.Add(appointment.AppointmentId);
+        }
+
+        return changed;
+    }
+
+    private static bool RefreshAnalyticsDemoAppointments(
+        ClinicDbContext db,
+        DateTime today,
+        HashSet<int> refreshedAppointmentIds)
+    {
+        var changed = false;
+        var analyticsAppointments = db.Appointments
+            .Where(x => x.Reason != null &&
+                        x.Reason.StartsWith(AnalyticsDemoReasonPrefix))
+            .OrderBy(x => x.AppointmentId)
+            .ToList();
+        var cursor = 0;
+
+        for (var dayIndex = 0; dayIndex < AnalyticsTrendPattern.Length && cursor < analyticsAppointments.Count; dayIndex++)
+        {
+            var targetCount = AnalyticsTrendPattern[dayIndex];
+            var targetDate = today.AddDays(dayIndex - AnalyticsTrendPattern.Length).Date;
+            for (var dayCount = 0; dayCount < targetCount && cursor < analyticsAppointments.Count; dayCount++)
+            {
+                var appointment = analyticsAppointments[cursor];
+                var targetStatus = dayCount % 6 == 0
+                    ? AppointmentStatus.Cancelled
+                    : AppointmentStatus.Completed;
+                var targetReason = $"{AnalyticsDemoReasonPrefix} {dayIndex + 1}";
+
+                changed |= ApplyAppointmentTimeline(
+                    appointment,
+                    targetDate,
+                    targetStatus,
+                    targetDate.AddDays(-1).AddHours(9),
+                    targetReason);
+                refreshedAppointmentIds.Add(appointment.AppointmentId);
+                cursor++;
+            }
+        }
+
+        for (; cursor < analyticsAppointments.Count; cursor++)
+        {
+            var appointment = analyticsAppointments[cursor];
+            var dayIndex = cursor % AnalyticsTrendPattern.Length;
+            var targetDate = today.AddDays(dayIndex - AnalyticsTrendPattern.Length).Date;
+            changed |= ApplyAppointmentTimeline(
+                appointment,
+                targetDate,
+                AppointmentStatus.Completed,
+                targetDate.AddDays(-1).AddHours(9),
+                $"{AnalyticsDemoReasonPrefix} {dayIndex + 1}");
+            refreshedAppointmentIds.Add(appointment.AppointmentId);
+        }
+
+        return changed;
+    }
+
+    private static bool RefreshDemoDependentDates(ClinicDbContext db, HashSet<int> appointmentIds)
+    {
+        if (appointmentIds.Count == 0)
+        {
+            return false;
+        }
+
+        var changed = false;
+        var appointments = db.Appointments
+            .Where(x => appointmentIds.Contains(x.AppointmentId))
+            .ToDictionary(x => x.AppointmentId);
+
+        foreach (var record in db.MedicalRecords.Where(x => appointmentIds.Contains(x.AppointmentId)))
+        {
+            if (!appointments.TryGetValue(record.AppointmentId, out var appointment))
+            {
+                continue;
+            }
+
+            var targetCreatedAt = appointment.AppointmentDate.AddHours(appointment.TimeSlot.StartsWith("08") ? 8 : 14);
+            if (record.CreatedAt != targetCreatedAt)
+            {
+                record.CreatedAt = targetCreatedAt;
+                changed = true;
+            }
+        }
+
+        foreach (var invoice in db.Invoices.Where(x => appointmentIds.Contains(x.AppointmentId)))
+        {
+            if (!appointments.TryGetValue(invoice.AppointmentId, out var appointment))
+            {
+                continue;
+            }
+
+            var targetCreatedAt = appointment.AppointmentDate.AddHours(17);
+            if (invoice.CreatedAt != targetCreatedAt)
+            {
+                invoice.CreatedAt = targetCreatedAt;
+                changed = true;
+            }
+        }
+
+        return changed;
+    }
+
+    private static bool ApplyAppointmentTimeline(
+        Appointment appointment,
+        DateTime targetDate,
+        AppointmentStatus targetStatus,
+        DateTime targetCreatedAt,
+        string? targetReason = null)
+    {
+        var changed = false;
+        if (appointment.AppointmentDate.Date != targetDate)
+        {
+            appointment.AppointmentDate = targetDate;
+            changed = true;
+        }
+
+        if (appointment.Status != targetStatus)
+        {
+            appointment.Status = targetStatus;
+            changed = true;
+        }
+
+        if (appointment.CreatedAt != targetCreatedAt)
+        {
+            appointment.CreatedAt = targetCreatedAt;
+            changed = true;
+        }
+
+        if (targetReason is not null && !string.Equals(appointment.Reason, targetReason, StringComparison.Ordinal))
+        {
+            appointment.Reason = targetReason;
+            changed = true;
+        }
+
+        return changed;
     }
 
     private static void EnsureVietnameseDemoDataText(ClinicDbContext db)
