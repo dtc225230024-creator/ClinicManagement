@@ -1,6 +1,19 @@
 @model ClinicManagement.ViewModels.AppointmentCreateViewModel
 @{
     ViewData["Title"] = "Đặt lịch khám";
+    var canContinueStep1 = !string.IsNullOrWhiteSpace(Model.Reason) && Model.DepartmentId is not null;
+    var canContinueStep2 = Model.PatientId is not null;
+    var canBookAppointment = !string.IsNullOrWhiteSpace(Model.SelectedSuggestionKey);
+
+    string StepState(int step)
+    {
+        if (Model.Step == step)
+        {
+            return "active";
+        }
+
+        return Model.Step > step ? "done" : "pending";
+    }
 }
 
 <section class="page-heading">
@@ -13,21 +26,21 @@
 </section>
 
 <div class="booking-steps" aria-label="Tiến độ đặt lịch">
-    <div class="booking-step @(Model.Step == 1 ? "active" : Model.Step > 1 ? "done" : string.Empty)">
-        <span class="booking-step-index">1</span>
+    <div class="booking-step @StepState(1)" aria-current="@(Model.Step == 1 ? "step" : null)">
+        <span class="booking-step-index">@(Model.Step > 1 ? "✓" : "1")</span>
         <div>
             <strong>Nhu cầu và chuyên khoa</strong>
             <small>Gợi ý chuyên khoa phù hợp</small>
         </div>
     </div>
-    <div class="booking-step @(Model.Step == 2 ? "active" : Model.Step > 2 ? "done" : string.Empty)">
-        <span class="booking-step-index">2</span>
+    <div class="booking-step @StepState(2)" aria-current="@(Model.Step == 2 ? "step" : null)">
+        <span class="booking-step-index">@(Model.Step > 2 ? "✓" : "2")</span>
         <div>
             <strong>Tra cứu bệnh nhân</strong>
             <small>Chọn hồ sơ đăng ký khám</small>
         </div>
     </div>
-    <div class="booking-step @(Model.Step == 3 ? "active" : string.Empty)">
+    <div class="booking-step @StepState(3)" aria-current="@(Model.Step == 3 ? "step" : null)">
         <span class="booking-step-index">3</span>
         <div>
             <strong>Chọn lịch khám</strong>
@@ -63,9 +76,8 @@
     @if (Model.Step == 1)
     {
         <section class="booking-panel">
-            <div class="booking-panel-header">
-                <h2>Bước 1. Tiếp nhận nhu cầu khám</h2>
-                <p>Nhập thông tin triệu chứng hoặc yêu cầu khám để hệ thống gợi ý chuyên khoa phù hợp.</p>
+            <div class="booking-panel-header compact">
+                <p class="booking-panel-intro">Nhập thông tin triệu chứng hoặc yêu cầu khám để hệ thống gợi ý chuyên khoa phù hợp.</p>
             </div>
 
             <label class="form-label">
@@ -89,7 +101,7 @@
 
                 @if (Model.Departments.Any())
                 {
-                    <div class="choice-list department-suggestion-list" data-ai-department-list="true">
+                    <div class="choice-list multi-column-list department-suggestion-list" data-ai-department-list="true">
                         @foreach (var item in Model.Departments.Select((department, index) => new { department, index }))
                         {
                             var isAiSuggested = Model.AiSuggestedDepartmentIds.Contains(item.department.DepartmentId);
@@ -114,16 +126,15 @@
             </div>
 
             <div class="booking-actions">
-                <button class="btn btn-primary" name="command" value="next-step-1" type="submit">Tiếp: Chọn bệnh nhân</button>
+                <button class="btn btn-primary" name="command" value="next-step-1" type="submit" data-step-next="1" disabled="@(!canContinueStep1)">Tiếp: Chọn bệnh nhân</button>
             </div>
         </section>
     }
     else if (Model.Step == 2)
     {
         <section class="booking-panel">
-            <div class="booking-panel-header">
-                <h2>Bước 2. Tra cứu hồ sơ bệnh nhân</h2>
-                <p>Tìm bệnh nhân theo tên hoặc số điện thoại. Nếu chưa có hồ sơ, có thể tạo mới rồi quay lại đây.</p>
+            <div class="booking-panel-header compact">
+                <p class="booking-panel-intro">Tìm bệnh nhân theo tên hoặc số điện thoại. Nếu chưa có hồ sơ, có thể tạo mới rồi quay lại đây.</p>
             </div>
 
             <div class="booking-summary-grid">
@@ -148,7 +159,7 @@
 
             @if (Model.Patients.Any())
             {
-                <div class="choice-list">
+                <div class="choice-list multi-column-list">
                     @foreach (var patient in Model.Patients)
                     {
                         <label class="choice-item">
@@ -180,16 +191,15 @@
                     <button class="btn btn-outline-secondary" name="command" value="back-step-1" type="submit">Quay lại bước 1</button>
                     <a class="btn btn-outline-success" href="@Model.CreatePatientReturnUrl">Tạo hồ sơ bệnh nhân mới</a>
                 </div>
-                <button class="btn btn-primary" name="command" value="next-step-2" type="submit">Tiếp: Chọn lịch khám</button>
+                <button class="btn btn-primary" name="command" value="next-step-2" type="submit" data-step-next="2" disabled="@(!canContinueStep2)">Tiếp: Chọn lịch khám</button>
             </div>
         </section>
     }
     else
     {
         <section class="booking-panel">
-            <div class="booking-panel-header">
-                <h2>Bước 3. Chọn lịch khám và xác nhận</h2>
-                <p>Chọn khoảng thời gian khám, xem bác sĩ còn trống và xác nhận lịch phù hợp nhất.</p>
+            <div class="booking-panel-header compact">
+                <p class="booking-panel-intro">Chọn khoảng thời gian khám, xem bác sĩ còn trống và xác nhận lịch phù hợp nhất.</p>
             </div>
 
             <div class="booking-summary-grid booking-summary-grid-wide">
@@ -286,7 +296,7 @@
 
                     <details class="booking-collapsible" @(selectedSlot is null ? "open=\"open\"" : null)>
                         <summary>@(selectedSlot is null ? "Chọn khoảng thời gian" : "Đổi khoảng thời gian")</summary>
-                        <div class="choice-list">
+                        <div class="choice-list multi-column-list">
                             @foreach (var slot in Model.SuggestedTimeSlots)
                             {
                                 var isFull = slot.AvailableDoctorCount <= 0;
@@ -333,7 +343,7 @@
                 }
                 else if (Model.AppointmentSuggestions.Any())
                 {
-                    <div class="suggestion-list">
+                    <div class="suggestion-list multi-column-list">
                         @foreach (var suggestion in Model.AppointmentSuggestions)
                         {
                             <label class="suggestion">
@@ -364,7 +374,9 @@
                         data-confirm-title="Xác nhận đặt lịch?"
                         data-confirm-message="Hệ thống sẽ tạo lịch khám theo bác sĩ và khung giờ đã chọn ở bước 3."
                         data-confirm-text="Đặt lịch"
-                        data-confirm-style="primary">Xác nhận đặt lịch</button>
+                        data-confirm-style="primary"
+                        data-step-next="3"
+                        disabled="@(!canBookAppointment)">Xác nhận đặt lịch</button>
             </div>
         </section>
     }

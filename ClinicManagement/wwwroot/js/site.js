@@ -244,6 +244,57 @@
 })();
 
 (() => {
+    const form = document.querySelector("form.booking-wizard");
+    if (!(form instanceof HTMLFormElement)) {
+        return;
+    }
+
+    const hasValue = name => {
+        const field = form.elements.namedItem(name);
+        if (field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement || field instanceof HTMLSelectElement) {
+            return field.value.trim().length > 0;
+        }
+
+        return false;
+    };
+
+    const hasChecked = name => Boolean(form.querySelector(`input[name='${name}']:checked`));
+
+    const isStepReady = step => {
+        if (step === "1") {
+            return hasValue("Reason") && hasChecked("DepartmentId");
+        }
+
+        if (step === "2") {
+            return hasChecked("PatientId");
+        }
+
+        if (step === "3") {
+            return hasChecked("SelectedSuggestionKey");
+        }
+
+        return true;
+    };
+
+    const updateNextButtons = () => {
+        form.querySelectorAll("[data-step-next]").forEach(button => {
+            if (!(button instanceof HTMLButtonElement)) {
+                return;
+            }
+
+            const isReady = isStepReady(button.dataset.stepNext || "");
+            button.disabled = !isReady;
+            button.classList.toggle("is-disabled", !isReady);
+            button.setAttribute("aria-disabled", String(!isReady));
+        });
+    };
+
+    form.addEventListener("input", updateNextButtons);
+    form.addEventListener("change", updateNextButtons);
+    updateNextButtons();
+})();
+
+(() => {
     document.querySelectorAll("[data-auto-submit-command]").forEach(element => {
         if (!(element instanceof HTMLInputElement)) {
             return;

@@ -6,7 +6,35 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - Phòng khám An Tâm</title>
+    @{
+        var siteName = "Phòng khám An Tâm";
+        var pageTitle = ViewData["Title"]?.ToString();
+        var fullTitle = string.IsNullOrWhiteSpace(pageTitle) ? siteName : $"{pageTitle} - {siteName}";
+        var previewDescription = "Hệ thống quản lý phòng khám: tiếp nhận bệnh nhân, đặt lịch khám, hồ sơ khám, hóa đơn và thống kê.";
+        var forwardedProto = Context.Request.Headers["X-Forwarded-Proto"].ToString();
+        var forwardedHost = Context.Request.Headers["X-Forwarded-Host"].ToString();
+        var publicScheme = string.IsNullOrWhiteSpace(forwardedProto) ? Context.Request.Scheme : forwardedProto.Split(',')[0].Trim();
+        var publicHost = string.IsNullOrWhiteSpace(forwardedHost) ? Context.Request.Host.Value : forwardedHost.Split(',')[0].Trim();
+        var publicBaseUrl = $"{publicScheme}://{publicHost}";
+        var canonicalUrl = $"{publicBaseUrl}{Context.Request.PathBase}{Context.Request.Path}";
+        var previewImageUrl = $"{publicBaseUrl}{Url.Content("~/images/app-preview.png")}";
+    }
+    <title>@fullTitle</title>
+    <meta name="description" content="@previewDescription" />
+    <meta property="og:site_name" content="@siteName" />
+    <meta property="og:title" content="@fullTitle" />
+    <meta property="og:description" content="@previewDescription" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="@canonicalUrl" />
+    <meta property="og:image" content="@previewImageUrl" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="@fullTitle" />
+    <meta name="twitter:description" content="@previewDescription" />
+    <meta name="twitter:image" content="@previewImageUrl" />
+    <link rel="icon" type="image/svg+xml" href="~/icons/clinic-cross.svg" asp-append-version="true" />
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/ClinicManagement.styles.css" asp-append-version="true" />
