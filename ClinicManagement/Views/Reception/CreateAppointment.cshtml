@@ -211,16 +211,61 @@
             <div class="booking-toolbar">
                 <label class="form-label mb-0">
                     Ngày khám mong muốn
-                    <input asp-for="DesiredDate" class="form-control" />
+                    <input asp-for="DesiredDate"
+                           type="date"
+                           class="form-control"
+                           value="@Model.DesiredDate.ToString("yyyy-MM-dd")"
+                           min="@DateTime.Today.ToString("yyyy-MM-dd")" />
                 </label>
                 <button class="btn btn-outline-primary" name="command" value="refresh-step-3" type="submit">Cập nhật gợi ý</button>
             </div>
+
+            @if (Model.AvailabilityDays.Any())
+            {
+                <div class="booking-subsection">
+                    <div class="section-heading-inline">
+                        <div>
+                            <h3>Lịch trống trong 7 ngày tới</h3>
+                            <p>Màu xanh là còn nhiều ca trống, vàng là gần kín, đỏ là rất ít hoặc đã kín.</p>
+                        </div>
+                    </div>
+                    <div class="availability-week-grid">
+                        @foreach (var day in Model.AvailabilityDays)
+                        {
+                            <label class="availability-day-card availability-@day.LoadLevel @(day.IsSelected ? "is-selected" : string.Empty)">
+                                <input type="radio"
+                                       name="DesiredDateQuick"
+                                       value="@day.Date.ToString("yyyy-MM-dd")"
+                                       checked="@(day.IsSelected ? "checked" : null)"
+                                       data-auto-submit-command="refresh-step-3"
+                                       data-auto-set-field="DesiredDate"
+                                       data-auto-set-value="@day.Date.ToString("yyyy-MM-dd")" />
+                                <span class="availability-day-title">@day.Date.ToString("dd/MM")</span>
+                                <strong>@day.Date.ToString("dddd")</strong>
+                                <span class="availability-meter" aria-hidden="true">
+                                    <span style="width: @day.AvailabilityPercent%"></span>
+                                </span>
+                                <small>@day.Summary</small>
+                                <small>@day.AvailableDoctorSlotCount/@day.TotalDoctorSlotCount lượt bác sĩ còn trống</small>
+                                <span class="availability-session-row">
+                                    @foreach (var session in day.Sessions)
+                                    {
+                                        <span class="availability-session availability-@session.LoadLevel">
+                                            @session.Label: @session.AvailableTimeSlotCount/@session.TotalTimeSlotCount khung
+                                        </span>
+                                    }
+                                </span>
+                            </label>
+                        }
+                    </div>
+                </div>
+            }
 
             <div class="booking-subsection">
                 <div class="section-heading-inline">
                     <div>
                         <h3>Khoảng thời gian khám gợi ý</h3>
-                        <p>Bước này tương ứng với gợi ý khoảng thời gian trong use case.</p>
+                        <p>Danh sách này dựa trên lịch làm việc bác sĩ, chuyên khoa đã chọn và các lịch chưa hủy đang chiếm chỗ.</p>
                     </div>
                 </div>
 
@@ -235,7 +280,7 @@
                                 <strong>@selectedSlot.TimeSlot</strong>
                                 <small>@selectedSlot.Recommendation</small>
                             </div>
-                            <span>@selectedSlot.AvailableDoctorCount bác sĩ còn trống</span>
+                            <span>@selectedSlot.AvailableDoctorCount/@selectedSlot.TotalDoctorCount bác sĩ còn trống</span>
                         </article>
                     }
 
@@ -244,14 +289,19 @@
                         <div class="choice-list">
                             @foreach (var slot in Model.SuggestedTimeSlots)
                             {
-                                <label class="choice-item choice-item-rich">
+                                var isFull = slot.AvailableDoctorCount <= 0;
+                                <label class="choice-item choice-item-rich slot-choice availability-@slot.LoadLevel @(isFull ? "is-disabled" : string.Empty)">
                                     <input type="radio"
                                            asp-for="SelectedTimeSlot"
                                            value="@slot.TimeSlot"
-                                           data-auto-submit-command="refresh-step-3" />
+                                           data-auto-submit-command="refresh-step-3"
+                                           disabled="@isFull" />
                                     <span>@slot.TimeSlot</span>
                                     <small>@slot.Recommendation</small>
-                                    <small>@slot.AvailableDoctorCount bác sĩ còn trống, @slot.BusyDoctorCount đã kín trong khung giờ này</small>
+                                    <span class="availability-meter" aria-hidden="true">
+                                        <span style="width: @slot.AvailabilityPercent%"></span>
+                                    </span>
+                                    <small>@slot.AvailableDoctorCount/@slot.TotalDoctorCount bác sĩ còn trống, @slot.BusyDoctorCount đã kín trong khung giờ này</small>
                                 </label>
                             }
                         </div>

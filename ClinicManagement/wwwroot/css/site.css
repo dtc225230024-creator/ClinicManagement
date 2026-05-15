@@ -666,6 +666,146 @@ body {
   margin-bottom: .65rem;
 }
 
+.availability-week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(8.6rem, 1fr));
+  gap: .7rem;
+  overflow-x: auto;
+  padding-bottom: .15rem;
+}
+
+.availability-day-card {
+  display: grid;
+  gap: .35rem;
+  min-width: 8.6rem;
+  padding: .75rem;
+  border: 1px solid #d8e3e7;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+
+.availability-day-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 32px rgba(18, 52, 59, .09);
+}
+
+.availability-day-card input {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.availability-day-card.is-selected {
+  border-color: #0f766e;
+  box-shadow: 0 16px 32px rgba(15, 118, 110, .14);
+}
+
+.availability-day-title {
+  color: #0f766e;
+  font-size: .9rem;
+  font-weight: 800;
+}
+
+.availability-day-card strong {
+  color: #173b43;
+  font-size: 1rem;
+}
+
+.availability-day-card small {
+  color: #49646d;
+  font-size: .82rem;
+}
+
+.availability-meter {
+  display: block;
+  width: 100%;
+  height: .46rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e7ecef;
+}
+
+.availability-meter span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #0f766e;
+}
+
+.availability-session-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+  margin-top: .2rem;
+}
+
+.availability-session {
+  padding: .2rem .45rem;
+  border-radius: 999px;
+  background: #edf5f2;
+  color: #226454;
+  font-size: .75rem;
+  font-weight: 700;
+}
+
+.availability-open {
+  border-color: #81c7a7;
+  background: #f1fbf5;
+}
+
+.availability-open .availability-meter span,
+.availability-session.availability-open {
+  background: #169b62;
+  color: #fff;
+}
+
+.availability-medium {
+  border-color: #dfc66b;
+  background: #fff9e7;
+}
+
+.availability-medium .availability-meter span,
+.availability-session.availability-medium {
+  background: #c99714;
+  color: #fff;
+}
+
+.availability-tight {
+  border-color: #e3a15f;
+  background: #fff4e8;
+}
+
+.availability-tight .availability-meter span,
+.availability-session.availability-tight {
+  background: #d36b22;
+  color: #fff;
+}
+
+.availability-full {
+  border-color: #e59a9a;
+  background: #fff1f1;
+}
+
+.availability-full .availability-meter span,
+.availability-session.availability-full {
+  background: #c24141;
+  color: #fff;
+}
+
+.slot-choice .availability-meter {
+  grid-column: 2;
+  max-width: 18rem;
+}
+
+.slot-choice.is-disabled {
+  opacity: .72;
+  cursor: not-allowed;
+}
+
 .user-manual-modal .modal-header {
   align-items: flex-start;
 }

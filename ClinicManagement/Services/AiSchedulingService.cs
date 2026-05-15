@@ -14,8 +14,9 @@ public class AiSchedulingService(ClinicStore store, ClinicDbContext db, IMemoryC
     private static readonly string[] Slots =
     [
         "08:00-08:30", "08:30-09:00", "09:00-09:30", "09:30-10:00",
-        "10:00-10:30", "10:30-11:00", "13:30-14:00", "14:00-14:30",
-        "14:30-15:00", "15:00-15:30", "15:30-16:00"
+        "10:00-10:30", "10:30-11:00", "11:00-11:30", "13:30-14:00",
+        "14:00-14:30", "14:30-15:00", "15:00-15:30", "15:30-16:00",
+        "16:00-16:30"
     ];
 
     private static readonly HashSet<string> PeakSlots =
@@ -91,18 +92,57 @@ public class AiSchedulingService(ClinicStore store, ClinicDbContext db, IMemoryC
     public IEnumerable<TimeSlotSuggestion> SuggestTimeSlots(DateTime desiredDate, int? departmentId = null)
     {
         return GetSlotAvailability(desiredDate.Date, departmentId)
-            .Where(x => x.AvailableDoctorCount > 0)
-            .OrderByDescending(x => x.Score)
-            .ThenBy(x => ParseStart(x.TimeSlot))
-            .Take(6)
+            .OrderBy(x => ParseStart(x.TimeSlot))
             .Select(x => new TimeSlotSuggestion
             {
                 TimeSlot = x.TimeSlot,
                 AvailableDoctorCount = x.AvailableDoctorCount,
                 BusyDoctorCount = x.BusyDoctorCount,
+                TotalDoctorCount = x.TotalDoctorCount,
+                AvailabilityPercent = CalculateAvailabilityPercent(x.AvailableDoctorCount, x.TotalDoctorCount),
+                LoadLevel = ResolveLoadLevel(x.AvailableDoctorCount, x.TotalDoctorCount),
                 Score = x.Score,
                 Recommendation = BuildRecommendation(x.AvailableDoctorCount, x.BusyDoctorCount, x.IsPeakHour)
             });
+    }
+
+    public IReadOnlyList<AvailabilityDayViewModel> GetAvailabilityDays(DateTime startDate, int departmentId, DateTime selectedDate, int dayCount = 7)
+    {
+        return Enumerable.Range(0, Math.Max(1, dayCount))
+            .Select(offset =>
+            {
+                var date = startDate.Date.AddDays(offset);
+                var slots = SuggestTimeSlots(date, departmentId).ToList();
+                var morningSlots = slots.Where(x => ParseStart(x.TimeSlot) < new TimeSpan(12, 0, 0)).ToList();
+                var afternoonSlots = slots.Where(x => ParseStart(x.TimeSlot) >= new TimeSpan(12, 0, 0)).ToList();
+                var availableDoctorSlotCount = slots.Sum(x => x.AvailableDoctorCount);
+                var busyDoctorSlotCount = slots.Sum(x => x.BusyDoctorCount);
+                var totalDoctorSlotCount = slots.Sum(x => x.TotalDoctorCount);
+                var availableTimeSlotCount = slots.Count(x => x.AvailableDoctorCount > 0);
+                var totalTimeSlotCount = slots.Count;
+
+                return new AvailabilityDayViewModel
+                {
+                    Date = date,
+                    IsSelected = date == selectedDate.Date,
+                    AvailableDoctorSlotCount = availableDoctorSlotCount,
+                    BusyDoctorSlotCount = busyDoctorSlotCount,
+                    TotalDoctorSlotCount = totalDoctorSlotCount,
+                    AvailableTimeSlotCount = availableTimeSlotCount,
+                    TotalTimeSlotCount = totalTimeSlotCount,
+                    AvailabilityPercent = CalculateAvailabilityPercent(availableDoctorSlotCount, totalDoctorSlotCount),
+                    LoadLevel = ResolveLoadLevel(availableDoctorSlotCount, totalDoctorSlotCount),
+                    Summary = totalTimeSlotCount == 0
+                        ? "Không có lịch làm việc"
+                        : $"{availableTimeSlotCount}/{totalTimeSlotCount} khung giờ còn trống",
+                    Sessions =
+                    [
+                        BuildSessionAvailability("Sáng", morningSlots),
+                        BuildSessionAvailability("Chiều", afternoonSlots)
+                    ]
+                };
+            })
+            .ToList();
     }
 
     public IEnumerable<AppointmentSuggestion> SuggestAppointments(
@@ -247,12 +287,13 @@ public class AiSchedulingService(ClinicStore store, ClinicDbContext db, IMemoryC
                 bookedDoctorIds ??= [];
 
                 var busyDoctorCount = bookedDoctorIds.Count(workingDoctorIds.Contains);
-                var availableDoctorCount = Math.Max(0, workingDoctorIds.Count - busyDoctorCount);
+                var totalDoctorCount = workingDoctorIds.Count;
+                var availableDoctorCount = Math.Max(0, totalDoctorCount - busyDoctorCount);
                 var isPeakHour = PeakSlots.Contains(slot);
                 var proximityPenalty = (int)(Math.Abs(ParseStart(slot).Ticks - new TimeSpan(9, 30, 0).Ticks) / TimeSpan.FromMinutes(30).Ticks);
                 var score = availableDoctorCount * 20 - busyDoctorCount * 9 - (isPeakHour ? 6 : 0) - proximityPenalty;
 
-                return new SlotAvailabilitySnapshot(slot, availableDoctorCount, busyDoctorCount, isPeakHour, score);
+                return new SlotAvailabilitySnapshot(slot, availableDoctorCount, busyDoctorCount, totalDoctorCount, isPeakHour, score);
             })
             .Where(x => x is not null)
             .Select(x => x!);
@@ -267,6 +308,11 @@ public class AiSchedulingService(ClinicStore store, ClinicDbContext db, IMemoryC
 
     private static string BuildRecommendation(int availableDoctorCount, int busyDoctorCount, bool isPeakHour)
     {
+        if (availableDoctorCount == 0)
+        {
+            return "Khung giờ này đã kín lịch.";
+        }
+
         if (availableDoctorCount >= 3)
         {
             return isPeakHour
@@ -284,6 +330,48 @@ public class AiSchedulingService(ClinicStore store, ClinicDbContext db, IMemoryC
         return busyDoctorCount == 0
             ? "Khung giờ này vẫn còn trống."
             : "Chỉ còn một bác sĩ trống, nên đặt sớm.";
+    }
+
+    private static AvailabilitySessionViewModel BuildSessionAvailability(string label, IReadOnlyList<TimeSlotSuggestion> slots)
+    {
+        var availableDoctorSlotCount = slots.Sum(x => x.AvailableDoctorCount);
+        var busyDoctorSlotCount = slots.Sum(x => x.BusyDoctorCount);
+        var totalDoctorSlotCount = slots.Sum(x => x.TotalDoctorCount);
+
+        return new AvailabilitySessionViewModel
+        {
+            Label = label,
+            AvailableDoctorSlotCount = availableDoctorSlotCount,
+            BusyDoctorSlotCount = busyDoctorSlotCount,
+            TotalDoctorSlotCount = totalDoctorSlotCount,
+            AvailableTimeSlotCount = slots.Count(x => x.AvailableDoctorCount > 0),
+            TotalTimeSlotCount = slots.Count,
+            AvailabilityPercent = CalculateAvailabilityPercent(availableDoctorSlotCount, totalDoctorSlotCount),
+            LoadLevel = ResolveLoadLevel(availableDoctorSlotCount, totalDoctorSlotCount)
+        };
+    }
+
+    private static int CalculateAvailabilityPercent(int available, int total)
+    {
+        return total <= 0
+            ? 0
+            : (int)Math.Round(available * 100m / total);
+    }
+
+    private static string ResolveLoadLevel(int available, int total)
+    {
+        if (total <= 0 || available <= 0)
+        {
+            return "full";
+        }
+
+        var ratio = available / (decimal)total;
+        if (ratio >= .65m)
+        {
+            return "open";
+        }
+
+        return ratio >= .35m ? "medium" : "tight";
     }
 
     private IReadOnlyList<CachedSymptomRule> GetCachedSymptomRules()
@@ -350,6 +438,7 @@ public class AiSchedulingService(ClinicStore store, ClinicDbContext db, IMemoryC
         string TimeSlot,
         int AvailableDoctorCount,
         int BusyDoctorCount,
+        int TotalDoctorCount,
         bool IsPeakHour,
         int Score);
 }

@@ -291,7 +291,7 @@ public class AppointmentCreateViewModel
     public int? PatientId { get; set; }
 
     [DataType(DataType.Date)]
-    public DateTime DesiredDate { get; set; } = DateTime.Today.AddDays(1);
+    public DateTime DesiredDate { get; set; } = DateTime.Today;
 
     public string? SelectedTimeSlot { get; set; }
     public string? SelectedSuggestionKey { get; set; }
@@ -304,8 +304,36 @@ public class AppointmentCreateViewModel
     public IReadOnlySet<int> AiSuggestedDepartmentIds { get; set; } = new HashSet<int>();
     public IEnumerable<Department> Departments { get; set; } = [];
     public IEnumerable<Patient> Patients { get; set; } = [];
+    public IReadOnlyList<AvailabilityDayViewModel> AvailabilityDays { get; set; } = [];
     public IEnumerable<TimeSlotSuggestion> SuggestedTimeSlots { get; set; } = [];
     public IEnumerable<AppointmentSuggestion> AppointmentSuggestions { get; set; } = [];
+}
+
+public class AvailabilityDayViewModel
+{
+    public DateTime Date { get; set; }
+    public bool IsSelected { get; set; }
+    public int AvailableDoctorSlotCount { get; set; }
+    public int BusyDoctorSlotCount { get; set; }
+    public int TotalDoctorSlotCount { get; set; }
+    public int AvailableTimeSlotCount { get; set; }
+    public int TotalTimeSlotCount { get; set; }
+    public int AvailabilityPercent { get; set; }
+    public string LoadLevel { get; set; } = "full";
+    public string Summary { get; set; } = string.Empty;
+    public IReadOnlyList<AvailabilitySessionViewModel> Sessions { get; set; } = [];
+}
+
+public class AvailabilitySessionViewModel
+{
+    public string Label { get; set; } = string.Empty;
+    public int AvailableDoctorSlotCount { get; set; }
+    public int BusyDoctorSlotCount { get; set; }
+    public int TotalDoctorSlotCount { get; set; }
+    public int AvailableTimeSlotCount { get; set; }
+    public int TotalTimeSlotCount { get; set; }
+    public int AvailabilityPercent { get; set; }
+    public string LoadLevel { get; set; } = "full";
 }
 
 public class TimeSlotSuggestion
@@ -313,6 +341,9 @@ public class TimeSlotSuggestion
     public string TimeSlot { get; set; } = string.Empty;
     public int AvailableDoctorCount { get; set; }
     public int BusyDoctorCount { get; set; }
+    public int TotalDoctorCount { get; set; }
+    public int AvailabilityPercent { get; set; }
+    public string LoadLevel { get; set; } = "full";
     public int Score { get; set; }
     public string Recommendation { get; set; } = string.Empty;
 }

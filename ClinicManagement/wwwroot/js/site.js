@@ -259,6 +259,15 @@
                 return;
             }
 
+            const targetFieldName = element.dataset.autoSetField;
+            const targetFieldValue = element.dataset.autoSetValue;
+            if (targetFieldName && targetFieldValue !== undefined) {
+                const targetInput = element.form.elements.namedItem(targetFieldName);
+                if (targetInput instanceof HTMLInputElement) {
+                    targetInput.value = targetFieldValue;
+                }
+            }
+
             let commandInput = element.form.querySelector("[data-auto-command-input='true']");
             if (!(commandInput instanceof HTMLInputElement)) {
                 commandInput = document.createElement("input");
