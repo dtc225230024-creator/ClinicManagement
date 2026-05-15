@@ -1362,6 +1362,217 @@ body {
   color: #70828a;
 }
 
+/* Higher contrast pass for readability across cards, tables and helper text. */
+body {
+  color: #111827;
+  background: linear-gradient(180deg, #f6faf9 0%, #eaf2f3 52%, #f7fbfb 100%);
+}
+
+.app-navbar {
+  border-bottom-color: #b8c9ce;
+  background: rgba(255, 255, 255, .97);
+  box-shadow: 0 12px 28px rgba(18, 52, 59, .12);
+}
+
+.app-brand,
+.page-heading h1,
+.login-panel h1,
+.line-chart-card h3,
+.range-summary strong {
+  color: #0f2f36 !important;
+}
+
+.app-nav-link {
+  color: #213f46 !important;
+}
+
+.app-nav-link:hover,
+.app-nav-link:focus-visible {
+  color: #085f58 !important;
+  background: #dff1ee;
+}
+
+.btn-primary,
+.range-preset-link.is-active,
+.app-pagination .page-item.active .page-link,
+.booking-step.active .booking-step-index {
+  background: #0b655e;
+  border-color: #0b655e;
+}
+
+.btn-primary:hover,
+.btn-primary:focus-visible {
+  background: #084f49;
+  border-color: #084f49;
+}
+
+.btn-outline-primary {
+  color: #0a5f58;
+  border-color: #46958c;
+}
+
+.btn-outline-secondary {
+  color: #243f47;
+  border-color: #9fb2bb;
+}
+
+.btn-outline-secondary:hover,
+.btn-outline-secondary:focus-visible {
+  color: #102f36;
+  background: #e7eef0;
+  border-color: #879fa8;
+}
+
+.text-muted,
+.form-text,
+.form-hint,
+.dashboard-subtitle,
+.stat-card span,
+.stat-card small,
+.booking-panel-header p,
+.section-heading-inline p,
+.booking-step,
+.booking-step small,
+.selected-choice-summary small,
+.availability-day-card small,
+.manual-summary,
+.manual-version,
+.choice-item small,
+.slot-insight span,
+.slot-insight small,
+.suggestion-row span,
+.range-summary span,
+.range-summary small,
+.line-chart-card p,
+.detail-panel dt,
+.list-meta,
+.confirmation-modal-message,
+.app-footer-inner,
+.app-footer-meta {
+  color: #374b55 !important;
+}
+
+.eyebrow,
+.availability-day-title,
+.sort-link:hover,
+.sort-link:focus-visible,
+.app-pagination .page-link:hover,
+.app-pagination .page-link:focus-visible {
+  color: #08655d !important;
+}
+
+.stat-card,
+.login-panel,
+.summary-box,
+.booking-panel,
+.booking-step,
+.selected-choice-summary,
+.availability-day-card,
+.choice-item,
+.suggestion,
+.service-list label,
+.slot-insight,
+.suggestion-row,
+.line-chart-card,
+.detail-panel,
+.table,
+.empty-state,
+.manual-section,
+.filter-toolbar,
+.slot-grid label {
+  border-color: #b9cbd1;
+  background-color: #fff;
+}
+
+.form-control,
+.form-select {
+  color: #111827;
+  border-color: #9fb2bb;
+  background: #fff;
+}
+
+.form-control::placeholder {
+  color: #52636c;
+  opacity: 1;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: #0b655e;
+  box-shadow: 0 0 0 .22rem rgba(11, 101, 94, .18);
+}
+
+.demo-accounts,
+.app-user-pill,
+.choice-badge,
+.availability-session,
+.booking-step-index {
+  color: #16454d;
+  background: #e1f1ee;
+  border-color: #abcac5;
+}
+
+.department-choice.ai-suggested {
+  border-color: #0b655e;
+  background: linear-gradient(90deg, #e4f7f1 0%, #ffffff 70%);
+  box-shadow: 0 18px 34px rgba(11, 101, 94, .2);
+}
+
+.choice-item:has(input:checked),
+.suggestion:has(input:checked),
+.service-list label:has(input:checked),
+.availability-day-card.is-selected {
+  border-color: #0b655e;
+  box-shadow: 0 16px 32px rgba(11, 101, 94, .18);
+}
+
+.table {
+  border-color: #b9cbd1;
+  background: #fff;
+}
+
+.table > :not(caption) > * > * {
+  border-color: #c8d6db;
+}
+
+.table thead th {
+  background: #dfeceb;
+  color: #153b43;
+}
+
+.table tbody tr:hover {
+  background: #eef7f6;
+}
+
+.sort-icon-arrow {
+  color: #6f838b;
+}
+
+.sort-link.is-ascending .sort-icon-arrow-up,
+.sort-link.is-descending .sort-icon-arrow-down {
+  color: #0b655e;
+}
+
+.sort-link.is-ascending .sort-icon-arrow-down,
+.sort-link.is-descending .sort-icon-arrow-up {
+  color: #9aaab0;
+}
+
+.line-chart-grid-line,
+.line-chart-axis {
+  stroke: #b9cbd1;
+}
+
+.line-chart-axis-label,
+.line-chart-point-label {
+  fill: #374b55;
+}
+
+.app-footer {
+  border-top-color: #b8c9ce;
+  background: rgba(255, 255, 255, .9);
+}
+
 @media (max-width: 900px) {
   .page-heading,
   .booking-layout {
