@@ -33,20 +33,20 @@ public class UserManualService
         return new UserManualViewModel
         {
             RoleName = "Admin",
-            Title = "Hướng dẫn nhanh cho quản trị viên",
+            Title = "Thông tin sử dụng cho quản trị viên",
             Summary = "Tài khoản Admin quản lý cấu hình hệ thống, tài khoản người dùng, danh mục và theo dõi số liệu tổng quan.",
             Permissions =
             [
                 "Quản lý tài khoản, vai trò, trạng thái khóa/mở và reset mật khẩu tạm thời.",
                 "Liên kết tài khoản bác sĩ với hồ sơ bác sĩ tương ứng.",
-                "Quản lý bác sĩ, chuyên khoa, dịch vụ khám, lịch làm việc và luật gợi ý AI.",
+                "Quản lý bác sĩ, chuyên khoa, dịch vụ khám, lịch làm việc và luật gợi ý.",
                 "Xem lịch khám toàn hệ thống, hồ sơ khám và báo cáo thống kê."
             ],
             Features =
             [
                 "Tài khoản: tạo user mới, sửa vai trò, reset mật khẩu, khóa/mở tài khoản.",
                 "Bác sĩ: thêm/sửa bác sĩ, liên kết tài khoản và quản lý ca làm việc.",
-                "Luật AI: thêm cụm triệu chứng, gán chuyên khoa và điều chỉnh điểm ưu tiên.",
+                "Luật gợi ý: thêm cụm triệu chứng, gán chuyên khoa và điều chỉnh điểm ưu tiên.",
                 "Thống kê: lọc nhanh khoảng thời gian, xem biểu đồ và bảng dữ liệu chi tiết."
             ],
             Workflows =
@@ -58,12 +58,12 @@ public class UserManualService
                     "Chọn đúng bác sĩ liên kết, lưu tài khoản.",
                     "Thông báo mật khẩu tạm thời cho bác sĩ; hệ thống sẽ bắt đổi mật khẩu lần đầu."
                 ]),
-                Workflow("Cập nhật luật gợi ý AI",
+                Workflow("Cập nhật luật gợi ý",
                 [
-                    "Mở Luật AI.",
+                    "Mở Luật gợi ý.",
                     "Tìm cụm triệu chứng hiện có để tránh trùng lặp.",
                     "Thêm hoặc sửa cụm triệu chứng, chọn chuyên khoa và điểm ưu tiên.",
-                    "Lưu thay đổi; cache AI sẽ được làm mới tự động."
+                    "Lưu thay đổi; danh sách gợi ý sẽ được cập nhật tự động."
                 ])
             ],
             Notes =
@@ -80,19 +80,19 @@ public class UserManualService
         return new UserManualViewModel
         {
             RoleName = "Lễ tân",
-            Title = "Hướng dẫn nhanh cho lễ tân",
+            Title = "Thông tin sử dụng cho lễ tân",
             Summary = "Tài khoản lễ tân tiếp nhận bệnh nhân, đặt lịch khám, đổi/hủy lịch và thanh toán sau khi bác sĩ hoàn tất khám.",
             Permissions =
             [
                 "Quản lý hồ sơ bệnh nhân.",
-                "Đặt lịch khám theo luồng AI gợi ý chuyên khoa, khung giờ và bác sĩ.",
+                "Đặt lịch khám theo gợi ý chuyên khoa, khung giờ và bác sĩ.",
                 "Đổi lịch, hủy lịch khi lịch còn hợp lệ.",
                 "Lập hóa đơn, chọn dịch vụ, thanh toán và in hóa đơn."
             ],
             Features =
             [
                 "Bệnh nhân: tìm kiếm, tạo mới và cập nhật hồ sơ.",
-                "Đặt lịch AI: nhập nhu cầu, chọn chuyên khoa, chọn bệnh nhân, chọn khung giờ và bác sĩ.",
+                "Đặt lịch khám: nhập nhu cầu, chọn chuyên khoa, chọn bệnh nhân, chọn khung giờ và bác sĩ.",
                 "Lịch khám: lọc, sắp xếp, đổi lịch, hủy lịch và mở hóa đơn.",
                 "Hóa đơn: chọn dịch vụ, lưu thanh toán và in phiếu."
             ],
@@ -100,7 +100,7 @@ public class UserManualService
             [
                 Workflow("Đặt lịch khám",
                 [
-                    "Nhập nhu cầu khám để AI gợi ý chuyên khoa.",
+                    "Nhập nhu cầu khám để hệ thống gợi ý chuyên khoa.",
                     "Chọn chuyên khoa phù hợp và sang bước tra cứu bệnh nhân.",
                     "Tìm hồ sơ bệnh nhân; nếu chưa có thì tạo hồ sơ mới và quay lại luồng đặt lịch.",
                     "Chọn ngày, khung giờ, bác sĩ gợi ý và xác nhận đặt lịch."
@@ -114,7 +114,7 @@ public class UserManualService
             ],
             Notes =
             [
-                "Lễ tân là người quyết định chuyên khoa cuối cùng, AI chỉ gợi ý.",
+                "Lễ tân là người quyết định chuyên khoa cuối cùng; kết quả gợi ý chỉ có vai trò tham khảo.",
                 "Chỉ thanh toán khi bác sĩ đã nhập kết quả khám.",
                 "Không hủy lịch đã có hóa đơn."
             ]
@@ -126,7 +126,7 @@ public class UserManualService
         return new UserManualViewModel
         {
             RoleName = "Bác sĩ",
-            Title = "Hướng dẫn nhanh cho bác sĩ",
+            Title = "Thông tin sử dụng cho bác sĩ",
             Summary = "Tài khoản bác sĩ xem lịch cá nhân, mở chi tiết lịch khám và nhập kết quả khám cho bệnh nhân.",
             Permissions =
             [

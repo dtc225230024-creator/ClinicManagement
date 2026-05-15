@@ -457,7 +457,7 @@ public class AdminController(ClinicStore store, AiSchedulingService ai) : Contro
         {
             store.SaveAiSymptomRule(rule);
             ai.ClearSymptomRuleCache();
-            TempData["Message"] = "Đã lưu luật gợi ý AI.";
+            TempData["Message"] = "Đã lưu luật gợi ý.";
             return RedirectToAction(nameof(AiRules), new { departmentId = rule.DepartmentId });
         }
         catch (InvalidOperationException ex)
@@ -473,7 +473,7 @@ public class AdminController(ClinicStore store, AiSchedulingService ai) : Contro
     {
         store.ToggleAiSymptomRule(id);
         ai.ClearSymptomRuleCache();
-        TempData["Message"] = "Đã cập nhật trạng thái luật AI.";
+        TempData["Message"] = "Đã cập nhật trạng thái luật gợi ý.";
         return RedirectToAction(nameof(AiRules));
     }
 

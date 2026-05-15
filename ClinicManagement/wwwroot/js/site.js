@@ -181,7 +181,7 @@
             choice.style.order = choice.dataset.originalOrder || "1";
             const marker = choice.querySelector(".ai-choice-marker");
             if (marker) {
-                marker.textContent = "AI gợi ý";
+                marker.textContent = "Đề xuất";
             }
         });
     };
@@ -203,7 +203,7 @@
             choice.classList.toggle("ai-suggested", isSuggested);
 
             if (marker && isSuggested) {
-                marker.textContent = suggestion.rank === 1 ? "AI ưu tiên nhất" : `AI gợi ý #${suggestion.rank}`;
+            marker.textContent = suggestion.rank === 1 ? "Đề xuất ưu tiên" : `Đề xuất #${suggestion.rank}`;
             }
         });
     };

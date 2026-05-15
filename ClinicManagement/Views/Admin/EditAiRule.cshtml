@@ -1,6 +1,6 @@
 @model ClinicManagement.Models.AiSymptomRule
 @{
-    ViewData["Title"] = Model.AiSymptomRuleId == 0 ? "Thêm luật AI" : "Cập nhật luật AI";
+    ViewData["Title"] = Model.AiSymptomRuleId == 0 ? "Thêm luật gợi ý" : "Cập nhật luật gợi ý";
 }
 
 <section class="page-heading">
@@ -47,7 +47,7 @@
         <button class="btn btn-primary"
                 type="submit"
                 data-confirm-modal="true"
-                data-confirm-title="Lưu luật AI?"
+                data-confirm-title="Lưu luật gợi ý?"
                 data-confirm-message="Hệ thống sẽ cập nhật bộ gợi ý chuyên khoa sau khi lưu."
                 data-confirm-text="Lưu"
                 data-confirm-style="primary">Lưu</button>

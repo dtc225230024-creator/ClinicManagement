@@ -6,7 +6,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - ClinicCare AI</title>
+    <title>@ViewData["Title"] - Phòng khám An Tâm</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/ClinicManagement.styles.css" asp-append-version="true" />
@@ -55,7 +55,7 @@
     <header class="app-header">
         <nav class="navbar navbar-expand-lg navbar-light app-navbar">
             <div class="container-fluid app-navbar-inner">
-                <a class="navbar-brand fw-bold app-brand" asp-controller="Home" asp-action="Index">ClinicCare AI</a>
+                <a class="navbar-brand fw-bold app-brand" asp-controller="Home" asp-action="Index">Phòng khám An Tâm</a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
                         aria-expanded="false" aria-label="Mở menu điều hướng">
                     <span class="navbar-toggler-icon"></span>
@@ -70,7 +70,7 @@
                                 <li class="nav-item"><a class="@NavLinkClass("Admin", "Users", "EditUser")" asp-controller="Admin" asp-action="Users">Tài khoản</a></li>
                                 <li class="nav-item"><a class="@NavLinkClass("Admin", "Doctors", "EditDoctor", "Schedule")" asp-controller="Admin" asp-action="Doctors">Bác sĩ</a></li>
                                 <li class="nav-item"><a class="@NavLinkClass("Admin", "Departments", "EditDepartment")" asp-controller="Admin" asp-action="Departments">Chuyên khoa</a></li>
-                                <li class="nav-item"><a class="@NavLinkClass("Admin", "AiRules", "EditAiRule")" asp-controller="Admin" asp-action="AiRules">Luật AI</a></li>
+                                <li class="nav-item"><a class="@NavLinkClass("Admin", "AiRules", "EditAiRule")" asp-controller="Admin" asp-action="AiRules">Luật gợi ý</a></li>
                                 <li class="nav-item"><a class="@NavLinkClass("Admin", "Services", "EditService")" asp-controller="Admin" asp-action="Services">Dịch vụ</a></li>
                                 <li class="nav-item"><a class="@NavLinkClass("Reception", "Appointments", "Invoice", "PrintInvoice", "Reschedule")" asp-controller="Reception" asp-action="Appointments">Lịch khám</a></li>
                                 <li class="nav-item"><a class="@NavLinkClass("Reports", "Index")" asp-controller="Reports" asp-action="Index">Thống kê</a></li>
@@ -78,7 +78,7 @@
                             @if (User.IsInRole("Receptionist"))
                             {
                                 <li class="nav-item"><a class="@NavLinkClass("Reception", "Patients", "EditPatient")" asp-controller="Reception" asp-action="Patients">Bệnh nhân</a></li>
-                                <li class="nav-item"><a class="@NavLinkClass("Reception", "CreateAppointment")" asp-controller="Reception" asp-action="CreateAppointment">Đặt lịch AI</a></li>
+                                <li class="nav-item"><a class="@NavLinkClass("Reception", "CreateAppointment")" asp-controller="Reception" asp-action="CreateAppointment">Đặt lịch khám</a></li>
                                 <li class="nav-item"><a class="@NavLinkClass("Reception", "Appointments", "Invoice", "PrintInvoice", "Reschedule")" asp-controller="Reception" asp-action="Appointments">Lịch khám</a></li>
                             }
                             @if (User.IsInRole("Doctor"))
@@ -155,7 +155,7 @@
 
     <footer class="app-footer">
         <div class="container app-footer-inner">
-            <span class="app-footer-brand">ClinicCare AI</span>
+            <span class="app-footer-brand">Phòng khám An Tâm</span>
             <span class="app-footer-meta">&copy; @DateTime.Now.Year</span>
         </div>
     </footer>

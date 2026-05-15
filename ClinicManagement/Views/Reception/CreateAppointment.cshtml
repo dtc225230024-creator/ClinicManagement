@@ -17,7 +17,7 @@
         <span class="booking-step-index">1</span>
         <div>
             <strong>Nhu cầu và chuyên khoa</strong>
-            <small>AI gợi ý chuyên khoa phù hợp</small>
+            <small>Gợi ý chuyên khoa phù hợp</small>
         </div>
     </div>
     <div class="booking-step @(Model.Step == 2 ? "active" : Model.Step > 2 ? "done" : string.Empty)">
@@ -65,7 +65,7 @@
         <section class="booking-panel">
             <div class="booking-panel-header">
                 <h2>Bước 1. Tiếp nhận nhu cầu khám</h2>
-                <p>Nhập thông tin triệu chứng hoặc yêu cầu khám để AI gợi ý chuyên khoa phù hợp.</p>
+                <p>Nhập thông tin triệu chứng hoặc yêu cầu khám để hệ thống gợi ý chuyên khoa phù hợp.</p>
             </div>
 
             <label class="form-label">
@@ -82,8 +82,8 @@
             <div class="booking-subsection">
                 <div class="section-heading-inline">
                     <div>
-                        <h3>Chuyên khoa AI gợi ý</h3>
-                        <p>Lễ tân vẫn là người quyết định chuyên khoa cuối cùng.</p>
+                        <h3>Chuyên khoa phù hợp</h3>
+                        <p>Kết quả gợi ý chỉ có vai trò tham khảo, lễ tân là người quyết định chuyên khoa cuối cùng.</p>
                     </div>
                 </div>
 
@@ -99,7 +99,7 @@
                                 <input type="radio" asp-for="DepartmentId" value="@item.department.DepartmentId" />
                                 <span data-department-name="true">@item.department.DepartmentName</span>
                                 <small>@(string.IsNullOrWhiteSpace(item.department.Description) ? "Chuyên khoa đang hoạt động và có lịch làm việc." : item.department.Description)</small>
-                                <span class="choice-badge ai-choice-marker">AI gợi ý</span>
+                                <span class="choice-badge ai-choice-marker">Đề xuất</span>
                             </label>
                         }
                     </div>

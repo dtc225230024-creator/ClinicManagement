@@ -290,7 +290,7 @@ public class ClinicStore(ClinicDbContext db, PasswordHashService passwordHasher)
 
         if (!department.IsActive)
         {
-            throw new InvalidOperationException("Không thể gán luật AI vào chuyên khoa đã tạm ngưng.");
+                throw new InvalidOperationException("Không thể gán luật gợi ý vào chuyên khoa đã tạm ngưng.");
         }
 
         if (db.AiSymptomRules.Any(x =>

@@ -139,7 +139,7 @@ public class HomeController(ClinicStore store) : Controller
             ],
             Actions =
             [
-                Action("Đặt lịch AI", "Reception", "CreateAppointment", "btn btn-primary"),
+            Action("Đặt lịch khám", "Reception", "CreateAppointment", "btn btn-primary"),
                 Action("Quản lý bệnh nhân", "Reception", "Patients"),
                 Action("Xem lịch khám", "Reception", "Appointments")
             ],

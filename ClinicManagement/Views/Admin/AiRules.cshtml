@@ -1,6 +1,6 @@
 @model ClinicManagement.ViewModels.AiSymptomRuleDirectoryViewModel
 @{
-    ViewData["Title"] = "Quản lý luật AI";
+    ViewData["Title"] = "Quản lý luật gợi ý";
     var filterRouteValues = new Dictionary<string, string?>
     {
         ["q"] = Model.Query,
@@ -32,9 +32,9 @@
 <section class="page-heading">
     <div>
         <p class="eyebrow">Quản trị viên</p>
-        <h1>Quản lý luật gợi ý AI</h1>
+            <h1>Quản lý luật gợi ý</h1>
     </div>
-    <a class="btn btn-primary" asp-action="EditAiRule">Thêm luật AI</a>
+        <a class="btn btn-primary" asp-action="EditAiRule">Thêm luật gợi ý</a>
 </section>
 
 <form method="get" class="filter-toolbar compact">
@@ -79,7 +79,7 @@
 @if (!Model.Items.Any())
 {
     <div class="empty-state">
-        <h1>Không có luật AI phù hợp</h1>
+                <h1>Không có luật gợi ý phù hợp</h1>
         <p>Danh sách sẽ hiển thị sau khi có dữ liệu trùng với bộ lọc hiện tại.</p>
     </div>
 }
@@ -119,7 +119,7 @@ else
                             <button class="btn btn-outline-warning btn-sm"
                                     type="submit"
                                     data-confirm-modal="true"
-                                    data-confirm-title="@(item.Rule.IsActive ? "Tắt luật AI?" : "Bật lại luật AI?")"
+                                       data-confirm-title="@(item.Rule.IsActive ? "Tắt luật gợi ý?" : "Bật lại luật gợi ý?")"
                                     data-confirm-message="@(item.Rule.IsActive ? $"Cụm '{item.Rule.Term}' sẽ không còn được dùng để gợi ý." : $"Cụm '{item.Rule.Term}' sẽ được dùng lại để gợi ý.")"
                                     data-confirm-text="@(item.Rule.IsActive ? "Tắt" : "Bật")"
                                     data-confirm-style="warning">@(item.Rule.IsActive ? "Tắt" : "Bật")</button>
