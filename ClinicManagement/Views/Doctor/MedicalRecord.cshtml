@@ -1,3 +1,4 @@
+@using System.Globalization
 @model ClinicManagement.ViewModels.MedicalRecordViewModel
 @{
     ViewData["Title"] = "Kết quả khám";
@@ -16,12 +17,81 @@
     <span>@Model.Appointment?.Doctor.FullName - @Model.Appointment?.Department.DepartmentName</span>
 </div>
 
-<form asp-action="MedicalRecord" method="post" class="form-grid wide">
+<form asp-action="MedicalRecord" method="post" class="form-grid wide" data-medical-record-form="true">
+    <div asp-validation-summary="ModelOnly" class="text-danger full-span"></div>
     <input asp-for="Record.RecordId" type="hidden" />
     <input asp-for="Record.AppointmentId" type="hidden" />
     <label class="form-label">Triệu chứng<textarea asp-for="Record.Symptoms" class="form-control" rows="3"></textarea></label>
     <label class="form-label">Chẩn đoán<textarea asp-for="Record.Diagnosis" class="form-control" rows="3"></textarea></label>
     <label class="form-label">Kết quả khám<textarea asp-for="Record.ExaminationResult" class="form-control" rows="4"></textarea></label>
     <label class="form-label">Ghi chú<textarea asp-for="Record.Note" class="form-control" rows="3"></textarea></label>
-    <div class="form-actions"><button class="btn btn-primary" type="submit">Lưu hồ sơ</button></div>
+
+    <section class="detail-panel wide-panel full-span">
+        <h2>Dịch vụ đã sử dụng</h2>
+        <p class="text-muted">Bác sĩ chọn các dịch vụ thực tế đã thực hiện. Hệ thống sẽ lập hóa đơn chờ lễ tân xác nhận thanh toán.</p>
+        <div class="service-list">
+            @foreach (var service in Model.Services)
+            {
+                <label>
+                    <input type="checkbox"
+                           name="SelectedServiceIds"
+                           value="@service.ServiceId"
+                           data-service-price="@service.Price.ToString(CultureInfo.InvariantCulture)"
+                           checked="@(Model.SelectedServiceIds.Contains(service.ServiceId) ? "checked" : null)" />
+                    <span>@service.ServiceName</span>
+                    <strong>@service.Price.ToString("N0") đ</strong>
+                </label>
+            }
+        </div>
+        <div class="summary-box mt-3">
+            <span>Tổng tiền dịch vụ</span>
+            <strong data-service-total>0 đ</strong>
+        </div>
+    </section>
+
+    <div class="form-actions">
+        <button class="btn btn-primary"
+                type="submit"
+                data-confirm-modal="true"
+                data-confirm-title="Lưu kết quả khám?"
+                data-confirm-message="Kết quả khám và danh sách dịch vụ sẽ được lưu."
+                data-confirm-text="Lưu hồ sơ"
+                data-confirm-style="primary"
+                data-record-submit="true">Lưu hồ sơ</button>
+    </div>
 </form>
+
+@section Scripts {
+    <script>
+        (() => {
+            const form = document.querySelector('[data-medical-record-form="true"]');
+            if (!form) {
+                return;
+            }
+
+            const checkboxes = Array.from(form.querySelectorAll('[data-service-price]'));
+            const totalElement = form.querySelector('[data-service-total]');
+            const submitButton = form.querySelector('[data-record-submit]');
+            const currencyFormatter = new Intl.NumberFormat('vi-VN');
+
+            const updateServiceTotal = () => {
+                const total = checkboxes
+                    .filter((checkbox) => checkbox.checked)
+                    .reduce((sum, checkbox) => sum + Number(checkbox.dataset.servicePrice || 0), 0);
+                const formattedTotal = `${currencyFormatter.format(total)} đ`;
+
+                if (totalElement) {
+                    totalElement.textContent = formattedTotal;
+                }
+
+                if (submitButton) {
+                    submitButton.dataset.confirmMessage =
+                        `Kết quả khám sẽ được lưu và hóa đơn chờ thanh toán sẽ có tổng tiền ${formattedTotal}.`;
+                }
+            };
+
+            checkboxes.forEach((checkbox) => checkbox.addEventListener('change', updateServiceTotal));
+            updateServiceTotal();
+        })();
+    </script>
+}

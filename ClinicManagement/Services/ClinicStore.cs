@@ -508,9 +508,15 @@ public class ClinicStore(ClinicDbContext db, PasswordHashService passwordHasher)
         db.SaveChanges();
     }
 
-    public void SaveMedicalRecord(MedicalRecord record)
+    public void SaveMedicalRecord(MedicalRecord record, IEnumerable<int> serviceIds)
     {
         var appointment = db.Appointments.First(x => x.AppointmentId == record.AppointmentId);
+        if (appointment.Status == AppointmentStatus.Cancelled)
+        {
+            throw new InvalidOperationException("Không thể cập nhật kết quả cho lịch khám đã hủy.");
+        }
+
+        var selectedServices = GetSelectedInvoiceServices(serviceIds);
         var existing = db.MedicalRecords.FirstOrDefault(x => x.AppointmentId == record.AppointmentId);
 
         if (existing is null)
@@ -528,9 +534,37 @@ public class ClinicStore(ClinicDbContext db, PasswordHashService passwordHasher)
 
         appointment.Status = AppointmentStatus.Completed;
         db.SaveChanges();
+        SaveInvoiceServices(record.AppointmentId, selectedServices, PaymentStatus.Unpaid);
     }
 
     public Invoice SaveInvoice(int appointmentId, IEnumerable<int> serviceIds)
+    {
+        EnsureAppointmentCanHaveInvoice(appointmentId);
+        var selectedServices = GetSelectedInvoiceServices(serviceIds);
+        return SaveInvoiceServices(appointmentId, selectedServices, PaymentStatus.Paid);
+    }
+
+    public Invoice ConfirmInvoicePayment(int appointmentId)
+    {
+        EnsureAppointmentCanHaveInvoice(appointmentId);
+        var invoice = db.Invoices.FirstOrDefault(x => x.AppointmentId == appointmentId);
+        if (invoice is null)
+        {
+            throw new InvalidOperationException("Lịch khám này chưa có hóa đơn. Bác sĩ cần chọn dịch vụ khi nhập kết quả khám.");
+        }
+
+        if (!db.InvoiceDetails.Any(x => x.InvoiceId == invoice.InvoiceId))
+        {
+            throw new InvalidOperationException("Hóa đơn chưa có dịch vụ để thanh toán.");
+        }
+
+        invoice.PaymentStatus = PaymentStatus.Paid;
+        invoice.CreatedAt = DateTime.Now;
+        db.SaveChanges();
+        return invoice;
+    }
+
+    private Appointment EnsureAppointmentCanHaveInvoice(int appointmentId)
     {
         var appointment = db.Appointments.First(x => x.AppointmentId == appointmentId);
         if (appointment.Status == AppointmentStatus.Scheduled)
@@ -543,6 +577,11 @@ public class ClinicStore(ClinicDbContext db, PasswordHashService passwordHasher)
             throw new InvalidOperationException("Không thể lập hóa đơn cho lịch khám đã hủy.");
         }
 
+        return appointment;
+    }
+
+    private List<ClinicService> GetSelectedInvoiceServices(IEnumerable<int> serviceIds)
+    {
         var ids = serviceIds.ToList();
         if (ids.Count == 0)
         {
@@ -558,6 +597,11 @@ public class ClinicStore(ClinicDbContext db, PasswordHashService passwordHasher)
             throw new InvalidOperationException("Một hoặc nhiều dịch vụ đã ngưng áp dụng.");
         }
 
+        return selectedServices;
+    }
+
+    private Invoice SaveInvoiceServices(int appointmentId, IReadOnlyCollection<ClinicService> selectedServices, PaymentStatus paymentStatus)
+    {
         var invoice = db.Invoices.FirstOrDefault(x => x.AppointmentId == appointmentId);
 
         if (invoice is null)
@@ -586,7 +630,12 @@ public class ClinicStore(ClinicDbContext db, PasswordHashService passwordHasher)
 
         db.InvoiceDetails.AddRange(details);
         invoice.TotalAmount = details.Sum(x => x.LineTotal);
-        invoice.PaymentStatus = PaymentStatus.Paid;
+        invoice.PaymentStatus = paymentStatus;
+        if (paymentStatus == PaymentStatus.Paid)
+        {
+            invoice.CreatedAt = DateTime.Now;
+        }
+
         db.SaveChanges();
         return invoice;
     }

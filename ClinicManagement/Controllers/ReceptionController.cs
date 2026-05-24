@@ -516,8 +516,8 @@ public class ReceptionController(ClinicStore store, AiSchedulingService ai) : Co
     {
         try
         {
-            store.SaveInvoice(model.AppointmentId, model.SelectedServiceIds);
-            TempData["Message"] = "Đã lưu hóa đơn và xác nhận trạng thái thanh toán.";
+            store.ConfirmInvoicePayment(model.AppointmentId);
+            TempData["Message"] = "Đã xác nhận thanh toán hóa đơn.";
             return RedirectToAction(nameof(Invoice), new { appointmentId = model.AppointmentId });
         }
         catch (InvalidOperationException ex)
@@ -525,7 +525,7 @@ public class ReceptionController(ClinicStore store, AiSchedulingService ai) : Co
             try
             {
                 ModelState.AddModelError(string.Empty, ex.Message);
-                return View(BuildInvoiceModel(model.AppointmentId, model.SelectedServiceIds));
+                return View(BuildInvoiceModel(model.AppointmentId));
             }
             catch (InvalidOperationException)
             {
@@ -668,7 +668,7 @@ public class ReceptionController(ClinicStore store, AiSchedulingService ai) : Co
         };
     }
 
-    private InvoiceViewModel BuildInvoiceModel(int appointmentId, int[]? selectedServiceIds = null)
+    private InvoiceViewModel BuildInvoiceModel(int appointmentId)
     {
         var appointment = store.GetAppointmentItems().First(x => x.Appointment.AppointmentId == appointmentId);
         var invoice = store.Invoices.FirstOrDefault(x => x.AppointmentId == appointmentId);
@@ -683,7 +683,6 @@ public class ReceptionController(ClinicStore store, AiSchedulingService ai) : Co
         }
 
         List<InvoiceDetail> existingDetails = invoice is null ? [] : store.GetInvoiceDetails(invoice.InvoiceId).ToList();
-        var selectedIds = selectedServiceIds ?? existingDetails.Select(x => x.ServiceId).ToArray();
 
         return new InvoiceViewModel
         {
@@ -691,8 +690,6 @@ public class ReceptionController(ClinicStore store, AiSchedulingService ai) : Co
             Appointment = appointment,
             Invoice = invoice,
             ExistingDetails = existingDetails,
-            Services = store.Services.Where(s => s.IsActive),
-            SelectedServiceIds = selectedIds,
             TotalAmount = invoice?.TotalAmount ?? existingDetails.Sum(x => x.LineTotal)
         };
     }

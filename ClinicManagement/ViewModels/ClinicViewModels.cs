@@ -377,6 +377,8 @@ public class MedicalRecordViewModel
 {
     public AppointmentListItem? Appointment { get; set; }
     public MedicalRecord Record { get; set; } = new();
+    public IEnumerable<ClinicService> Services { get; set; } = [];
+    public int[] SelectedServiceIds { get; set; } = [];
 }
 
 public class InvoiceViewModel

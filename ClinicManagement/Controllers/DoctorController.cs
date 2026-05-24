@@ -98,11 +98,7 @@ public class DoctorController(ClinicStore store) : Controller
             return RedirectToAction(nameof(Schedule));
         }
 
-        return View(new MedicalRecordViewModel
-        {
-            Appointment = item,
-            Record = item.MedicalRecord ?? new MedicalRecord { AppointmentId = appointmentId }
-        });
+        return View(BuildMedicalRecordModel(item));
     }
 
     [HttpPost]
@@ -122,8 +118,17 @@ public class DoctorController(ClinicStore store) : Controller
             return RedirectToAction(nameof(Schedule));
         }
 
-        store.SaveMedicalRecord(model.Record);
-        TempData["Message"] = "Đã lưu kết quả khám bệnh.";
+        try
+        {
+            store.SaveMedicalRecord(model.Record, model.SelectedServiceIds);
+        }
+        catch (InvalidOperationException ex)
+        {
+            ModelState.AddModelError(string.Empty, ex.Message);
+            return View(BuildMedicalRecordModel(item, model.Record, model.SelectedServiceIds));
+        }
+
+        TempData["Message"] = "Đã lưu kết quả khám bệnh và cập nhật dịch vụ sử dụng.";
         return RedirectToAction(nameof(Schedule), new
         {
             tab = "completed",
@@ -166,6 +171,21 @@ public class DoctorController(ClinicStore store) : Controller
         }
 
         return item;
+    }
+
+    private MedicalRecordViewModel BuildMedicalRecordModel(AppointmentListItem item, MedicalRecord? record = null, int[]? selectedServiceIds = null)
+    {
+        List<InvoiceDetail> invoiceDetails = item.Invoice is null
+            ? []
+            : store.GetInvoiceDetails(item.Invoice.InvoiceId).ToList();
+
+        return new MedicalRecordViewModel
+        {
+            Appointment = item,
+            Record = record ?? item.MedicalRecord ?? new MedicalRecord { AppointmentId = item.Appointment.AppointmentId },
+            Services = store.Services.Where(s => s.IsActive).OrderBy(s => s.ServiceName),
+            SelectedServiceIds = selectedServiceIds ?? invoiceDetails.Select(x => x.ServiceId).ToArray()
+        };
     }
 
     private bool IsDoctorRestricted() => User.IsInRole("Doctor") && !User.IsInRole("Admin");
