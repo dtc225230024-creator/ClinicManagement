@@ -8,6 +8,7 @@
         ["date"] = Model.Date?.ToString("yyyy-MM-dd"),
         ["status"] = Model.Status?.ToString(),
         ["departmentId"] = Model.DepartmentId?.ToString(),
+        ["payment"] = Model.Payment,
         ["sort"] = Model.Sort,
         ["pageSize"] = Model.PageSize.ToString()
     };
@@ -72,6 +73,16 @@
         </select>
     </label>
     <label class="form-label">
+        Thanh toán
+        <select name="payment" class="form-select">
+            <option value="">Tất cả thanh toán</option>
+            <option value="waiting" selected="@(Model.Payment == "waiting" ? "selected" : null)">Cần thanh toán</option>
+            <option value="unpaid-invoice" selected="@(Model.Payment == "unpaid-invoice" ? "selected" : null)">Có hóa đơn chưa thanh toán</option>
+            <option value="no-invoice" selected="@(Model.Payment == "no-invoice" ? "selected" : null)">Chưa lập hóa đơn</option>
+            <option value="paid" selected="@(Model.Payment == "paid" ? "selected" : null)">Đã thanh toán</option>
+        </select>
+    </label>
+    <label class="form-label">
         Mỗi trang
         <select name="pageSize" class="form-select">
             @foreach (var option in Model.PageSizeOptions)
@@ -107,6 +118,7 @@ else
                 <th>Giờ</th>
                 <th>@await Html.PartialAsync("_SortHeader", SortHeader("Nhập kết quả lúc", "recorded", "recorded_desc"))</th>
                 <th>@await Html.PartialAsync("_SortHeader", SortHeader("Trạng thái", "status", "status_desc"))</th>
+                <th>Thanh toán</th>
                 <th></th>
             </tr>
             </thead>
@@ -147,6 +159,24 @@ else
                         })">
                             @DisplayText.AppointmentStatus(item.Appointment.Status)
                         </span>
+                    </td>
+                    <td>
+                        @if (item.Invoice?.PaymentStatus == ClinicManagement.Models.PaymentStatus.Paid)
+                        {
+                            <span class="badge bg-success">Đã thanh toán</span>
+                        }
+                        else if (item.Invoice?.PaymentStatus == ClinicManagement.Models.PaymentStatus.Unpaid)
+                        {
+                            <span class="badge bg-warning text-dark">Chưa thanh toán</span>
+                        }
+                        else if (item.Appointment.Status == ClinicManagement.Models.AppointmentStatus.Completed)
+                        {
+                            <span class="badge bg-danger">Chưa lập hóa đơn</span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">Chưa phát sinh</span>
+                        }
                     </td>
                     <td class="text-end action-stack">
                         @if (canManageReception && item.Appointment.Status == ClinicManagement.Models.AppointmentStatus.Scheduled)

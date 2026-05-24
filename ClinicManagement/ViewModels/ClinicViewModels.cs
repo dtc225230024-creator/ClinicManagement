@@ -130,6 +130,7 @@ public class AppointmentDirectoryViewModel : ListPageViewModel
 
     public AppointmentStatus? Status { get; set; }
     public int? DepartmentId { get; set; }
+    public string? Payment { get; set; }
     public IEnumerable<Department> Departments { get; set; } = [];
     public bool CanManageReception { get; set; }
     public IReadOnlyList<AppointmentListItem> Items { get; set; } = [];

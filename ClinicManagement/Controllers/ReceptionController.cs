@@ -343,14 +343,16 @@ public class ReceptionController(ClinicStore store, AiSchedulingService ai) : Co
     }
 
     [Authorize(Roles = "Admin,Receptionist")]
-    public IActionResult Appointments(string? q, DateTime? date, AppointmentStatus? status, int? departmentId, string? sort, int page = 1, int pageSize = 10)
+    public IActionResult Appointments(string? q, DateTime? date, AppointmentStatus? status, int? departmentId, string? payment, string? sort, int page = 1, int pageSize = 10)
     {
+        var normalizedPayment = NormalizePaymentFilter(payment);
         var model = new AppointmentDirectoryViewModel
         {
             Query = q,
             Date = date,
             Status = status,
             DepartmentId = departmentId,
+            Payment = normalizedPayment,
             Sort = string.IsNullOrWhiteSpace(sort) ? "date_desc" : sort,
             Page = page,
             PageSize = pageSize,
@@ -387,6 +389,15 @@ public class ReceptionController(ClinicStore store, AiSchedulingService ai) : Co
             items = items.Where(x => x.Department.DepartmentId == departmentId.Value);
         }
 
+        items = normalizedPayment switch
+        {
+            "waiting" => items.Where(NeedsPayment),
+            "unpaid-invoice" => items.Where(x => x.Invoice?.PaymentStatus == PaymentStatus.Unpaid),
+            "no-invoice" => items.Where(x => x.Appointment.Status == AppointmentStatus.Completed && x.Invoice is null),
+            "paid" => items.Where(x => x.Invoice?.PaymentStatus == PaymentStatus.Paid),
+            _ => items
+        };
+
         items = model.Sort switch
         {
             "date" => items.OrderBy(x => x.Appointment.AppointmentDate).ThenBy(x => x.Appointment.TimeSlot).ThenBy(x => x.Appointment.AppointmentId),
@@ -403,6 +414,18 @@ public class ReceptionController(ClinicStore store, AiSchedulingService ai) : Co
 
         model.Items = PagingHelper.ApplyPaging(items, model);
         return View(model);
+    }
+
+    private static string? NormalizePaymentFilter(string? payment)
+    {
+        var normalized = payment?.Trim().ToLowerInvariant();
+        return normalized is "waiting" or "unpaid-invoice" or "no-invoice" or "paid" ? normalized : null;
+    }
+
+    private static bool NeedsPayment(AppointmentListItem item)
+    {
+        return item.Appointment.Status == AppointmentStatus.Completed
+               && (item.Invoice is null || item.Invoice.PaymentStatus == PaymentStatus.Unpaid);
     }
 
     [HttpPost]
@@ -494,7 +517,7 @@ public class ReceptionController(ClinicStore store, AiSchedulingService ai) : Co
         try
         {
             store.SaveInvoice(model.AppointmentId, model.SelectedServiceIds);
-            TempData["Message"] = "Đã xác nhận thanh toán. Có thể xem và in hóa đơn ngay bây giờ.";
+            TempData["Message"] = "Đã lưu hóa đơn và xác nhận trạng thái thanh toán.";
             return RedirectToAction(nameof(Invoice), new { appointmentId = model.AppointmentId });
         }
         catch (InvalidOperationException ex)

@@ -1,6 +1,15 @@
+@using System.Globalization
+@using ClinicManagement.Models
 @model ClinicManagement.ViewModels.InvoiceViewModel
 @{
     ViewData["Title"] = "Thanh toán";
+    var isPaid = Model.Invoice?.PaymentStatus == PaymentStatus.Paid;
+    var primaryTitle = isPaid ? "Cập nhật hóa đơn?" : "Xác nhận thanh toán?";
+    var primaryText = isPaid ? "Cập nhật" : "Thanh toán";
+    var primaryLabel = isPaid ? "Cập nhật hóa đơn" : "Xác nhận thanh toán";
+    var initialConfirmMessage = isPaid
+        ? $"Thông tin hóa đơn của lịch #{Model.AppointmentId} sẽ được cập nhật theo danh sách dịch vụ đang chọn."
+        : $"Xác nhận đã thanh toán hóa đơn cho lịch #{Model.AppointmentId}.";
 }
 
 <section class="page-heading">
@@ -14,11 +23,11 @@
 <div class="summary-box">
     <strong>@Model.Appointment?.Patient.FullName</strong>
     <span>@Model.Appointment?.Doctor.FullName - @Model.Appointment?.Appointment.AppointmentDate.ToString("dd/MM/yyyy") @Model.Appointment?.Appointment.TimeSlot</span>
-    <span>Trạng thái: @(Model.Invoice?.PaymentStatus == ClinicManagement.Models.PaymentStatus.Paid ? "Đã thanh toán" : "Chưa thanh toán")</span>
+    <span>Trạng thái: @(isPaid ? "Đã thanh toán" : "Chưa thanh toán")</span>
     @if (Model.Invoice is not null)
     {
         <span>Mã hóa đơn: HD-@Model.Invoice.InvoiceId.ToString("00000")</span>
-        <span>Ngày thanh toán: @Model.Invoice.CreatedAt.ToString("dd/MM/yyyy HH:mm")</span>
+        <span>@(isPaid ? "Ngày thanh toán" : "Ngày lập hóa đơn"): @Model.Invoice.CreatedAt.ToString("dd/MM/yyyy HH:mm")</span>
     }
 </div>
 
@@ -68,7 +77,7 @@ else
 }
 
 <h2 class="section-title">Chọn dịch vụ thanh toán</h2>
-<form asp-action="Invoice" method="post">
+<form asp-action="Invoice" method="post" data-invoice-form="true">
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
     <input asp-for="AppointmentId" type="hidden" />
     <div class="service-list">
@@ -78,20 +87,28 @@ else
                 <input type="checkbox"
                        name="SelectedServiceIds"
                        value="@service.ServiceId"
+                       data-service-price="@service.Price.ToString(CultureInfo.InvariantCulture)"
                        checked="@Model.SelectedServiceIds.Contains(service.ServiceId)" />
                 <span>@service.ServiceName</span>
                 <strong>@service.Price.ToString("N0") đ</strong>
             </label>
         }
     </div>
+    <div class="summary-box mt-3">
+        <span>Tổng tiền đang chọn</span>
+        <strong data-invoice-total>0 đ</strong>
+    </div>
     <div class="form-actions mt-3">
         <button class="btn btn-primary"
                 type="submit"
+                data-invoice-submit="true"
+                data-invoice-is-paid="@isPaid.ToString().ToLowerInvariant()"
+                data-appointment-id="@Model.AppointmentId"
                 data-confirm-modal="true"
-                data-confirm-title="@(Model.Invoice is null ? "Xác nhận thanh toán?" : "Cập nhật hóa đơn?")"
-                data-confirm-message="@(Model.Invoice is null ? $"Hóa đơn cho lịch #{Model.AppointmentId} sẽ được tạo và đánh dấu đã thanh toán." : $"Thông tin hóa đơn của lịch #{Model.AppointmentId} sẽ được cập nhật theo danh sách dịch vụ đang chọn.")"
-                data-confirm-text="@(Model.Invoice is null ? "Thanh toán" : "Cập nhật")"
-                data-confirm-style="primary">@(Model.Invoice is null ? "Xác nhận thanh toán" : "Cập nhật hóa đơn")</button>
+                data-confirm-title="@primaryTitle"
+                data-confirm-message="@initialConfirmMessage"
+                data-confirm-text="@primaryText"
+                data-confirm-style="primary">@primaryLabel</button>
         @if (Model.Invoice is not null)
         {
             <a class="btn btn-outline-secondary"
@@ -102,3 +119,41 @@ else
         }
     </div>
 </form>
+
+@section Scripts {
+    <script>
+        (() => {
+            const form = document.querySelector('[data-invoice-form="true"]');
+            if (!form) {
+                return;
+            }
+
+            const checkboxes = Array.from(form.querySelectorAll('[data-service-price]'));
+            const totalElement = form.querySelector('[data-invoice-total]');
+            const submitButton = form.querySelector('[data-invoice-submit]');
+            const currencyFormatter = new Intl.NumberFormat('vi-VN');
+
+            const updateInvoiceTotal = () => {
+                const total = checkboxes
+                    .filter((checkbox) => checkbox.checked)
+                    .reduce((sum, checkbox) => sum + Number(checkbox.dataset.servicePrice || 0), 0);
+                const formattedTotal = `${currencyFormatter.format(total)} đ`;
+
+                if (totalElement) {
+                    totalElement.textContent = formattedTotal;
+                }
+
+                if (submitButton) {
+                    const appointmentId = submitButton.dataset.appointmentId;
+                    const isPaid = submitButton.dataset.invoiceIsPaid === 'true';
+                    submitButton.dataset.confirmMessage = isPaid
+                        ? `Thông tin hóa đơn của lịch #${appointmentId} sẽ được cập nhật. Tổng tiền mới: ${formattedTotal}.`
+                        : `Xác nhận đã thu ${formattedTotal} cho lịch #${appointmentId}?`;
+                }
+            };
+
+            checkboxes.forEach((checkbox) => checkbox.addEventListener('change', updateInvoiceTotal));
+            updateInvoiceTotal();
+        })();
+    </script>
+}
