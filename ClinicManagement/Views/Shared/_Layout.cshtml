@@ -140,36 +140,88 @@
             </div>
         </nav>
     </header>
-    @if (TempData["Message"] is not null || TempData["Error"] is not null)
+    @{
+        var successToast = TempData["Message"] as string;
+        var errorToast = TempData["Error"] as string;
+        var warningToast = TempData["Warning"] as string;
+        var infoToast = TempData["Info"] as string;
+        var hasToast = !string.IsNullOrWhiteSpace(successToast)
+            || !string.IsNullOrWhiteSpace(errorToast)
+            || !string.IsNullOrWhiteSpace(warningToast)
+            || !string.IsNullOrWhiteSpace(infoToast);
+    }
+    @if (hasToast)
     {
-        <div class="toast-container toast-stack position-fixed top-0 end-0 p-3">
-            @if (TempData["Message"] is not null)
+        <div class="toast-container toast-stack position-fixed bottom-0 start-0 p-3">
+            @if (!string.IsNullOrWhiteSpace(successToast))
             {
-                <div class="toast app-toast border-0 text-bg-success"
+                <div class="toast app-toast app-toast-success border-0"
                      role="status"
                      aria-live="polite"
                      aria-atomic="true"
                      data-auto-show="true"
                      data-bs-autohide="true"
-                     data-bs-delay="3200">
-                    <div class="d-flex">
-                        <div class="toast-body">@TempData["Message"]</div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Đóng"></button>
+                     data-bs-delay="5600">
+                    <div class="toast-content">
+                        <div class="toast-main">
+                            <span class="toast-type-badge">Thành công</span>
+                            <div class="toast-body">@successToast</div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Đóng"></button>
                     </div>
                 </div>
             }
-            @if (TempData["Error"] is not null)
+            @if (!string.IsNullOrWhiteSpace(errorToast))
             {
-                <div class="toast app-toast border-0 text-bg-danger"
+                <div class="toast app-toast app-toast-error border-0"
                      role="alert"
                      aria-live="assertive"
                      aria-atomic="true"
                      data-auto-show="true"
                      data-bs-autohide="true"
-                     data-bs-delay="4800">
-                    <div class="d-flex">
-                        <div class="toast-body">@TempData["Error"]</div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Đóng"></button>
+                     data-bs-delay="8000">
+                    <div class="toast-content">
+                        <div class="toast-main">
+                            <span class="toast-type-badge">Lỗi</span>
+                            <div class="toast-body">@errorToast</div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Đóng"></button>
+                    </div>
+                </div>
+            }
+            @if (!string.IsNullOrWhiteSpace(warningToast))
+            {
+                <div class="toast app-toast app-toast-warning border-0"
+                     role="alert"
+                     aria-live="assertive"
+                     aria-atomic="true"
+                     data-auto-show="true"
+                     data-bs-autohide="true"
+                     data-bs-delay="7200">
+                    <div class="toast-content">
+                        <div class="toast-main">
+                            <span class="toast-type-badge">Cảnh báo</span>
+                            <div class="toast-body">@warningToast</div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Đóng"></button>
+                    </div>
+                </div>
+            }
+            @if (!string.IsNullOrWhiteSpace(infoToast))
+            {
+                <div class="toast app-toast app-toast-info border-0"
+                     role="status"
+                     aria-live="polite"
+                     aria-atomic="true"
+                     data-auto-show="true"
+                     data-bs-autohide="true"
+                     data-bs-delay="6200">
+                    <div class="toast-content">
+                        <div class="toast-main">
+                            <span class="toast-type-badge">Thông tin</span>
+                            <div class="toast-body">@infoToast</div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Đóng"></button>
                     </div>
                 </div>
             }
