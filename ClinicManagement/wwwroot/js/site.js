@@ -125,7 +125,6 @@
                     input.setSelectionRange(selectionStart, selectionEnd);
                 }
             } catch {
-                // Some password managers can block restoring the caret position.
             }
         });
 

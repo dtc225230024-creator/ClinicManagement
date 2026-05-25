@@ -1443,7 +1443,7 @@ body {
   color: #70828a;
 }
 
-/* Higher contrast pass for readability across cards, tables and helper text. */
+/* Readability adjustments for dense content sections. */
 body {
   color: #111827;
   background: linear-gradient(180deg, #f6faf9 0%, #eaf2f3 52%, #f7fbfb 100%);
