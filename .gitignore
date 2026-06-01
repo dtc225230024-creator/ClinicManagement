@@ -10,10 +10,9 @@ artifacts/
 *.suo
 *.userosscache
 *.sln.docstates
-
-# Codex/local working files
 .codex_tmp/
 yeu-cau/
+scripts/
 
 # Logs/backups/temp files
 *.log

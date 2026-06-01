@@ -262,8 +262,7 @@ namespace ClinicManagement
 
         private static bool IsHostedProduction(IConfiguration configuration, IWebHostEnvironment environment)
         {
-            return environment.IsProduction() ||
-                   !string.IsNullOrWhiteSpace(configuration["RAILWAY_ENVIRONMENT"]) ||
+            return !string.IsNullOrWhiteSpace(configuration["RAILWAY_ENVIRONMENT"]) ||
                    !string.IsNullOrWhiteSpace(configuration["RAILWAY_PROJECT_ID"]) ||
                    !string.IsNullOrWhiteSpace(configuration["RAILWAY_SERVICE_ID"]);
         }
