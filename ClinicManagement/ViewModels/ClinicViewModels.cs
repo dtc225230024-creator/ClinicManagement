@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using ClinicManagement.Models;
+using ClinicManagement.Services;
 
 namespace ClinicManagement.ViewModels;
 
@@ -272,7 +273,7 @@ public class ScheduleEditViewModel : ListPageViewModel
     public IReadOnlyList<WorkSchedule> Items { get; set; } = [];
 
     [DataType(DataType.Date)]
-    public DateTime WorkDate { get; set; } = DateTime.Today;
+    public DateTime WorkDate { get; set; } = ClinicDate.Today;
 
     [DataType(DataType.Time)]
     public TimeSpan StartTime { get; set; } = new(8, 0, 0);
@@ -292,7 +293,7 @@ public class AppointmentCreateViewModel
     public int? PatientId { get; set; }
 
     [DataType(DataType.Date)]
-    public DateTime DesiredDate { get; set; } = DateTime.Today;
+    public DateTime DesiredDate { get; set; } = ClinicDate.Today;
 
     public string? SelectedTimeSlot { get; set; }
     public string? SelectedSuggestionKey { get; set; }
@@ -367,7 +368,7 @@ public class RescheduleAppointmentViewModel
     public AppointmentListItem? Appointment { get; set; }
 
     [DataType(DataType.Date)]
-    public DateTime DesiredDate { get; set; } = DateTime.Today.AddDays(1);
+    public DateTime DesiredDate { get; set; } = ClinicDate.Today.AddDays(1);
 
     public string? SelectedSuggestionKey { get; set; }
     public IEnumerable<AppointmentSuggestion> AppointmentSuggestions { get; set; } = [];

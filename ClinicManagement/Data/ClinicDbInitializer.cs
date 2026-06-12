@@ -13,8 +13,10 @@ public static class ClinicDbInitializer
     private const int TargetPatientCount = 100;
     private const int TargetAppointmentCount = 200;
     private const string TemporaryPassword = "Clinic@2026!";
-    private static DateTime SeedToday => DateTime.UtcNow.AddHours(7).Date;
+    private static DateTime SeedToday => ClinicDate.Today;
     private const string AnalyticsDemoReasonPrefix = "Báo cáo demo";
+    private const string FutureOperationalReasonPrefix = "Lịch vận hành demo";
+    private static readonly decimal[] FutureLoadPattern = [.72m, .38m, .88m, .55m, .24m, .66m, .46m];
 
     private static readonly (string Name, string Description)[] DepartmentSeeds =
     [
@@ -122,7 +124,8 @@ public static class ClinicDbInitializer
     [
         "08:00-08:30", "08:30-09:00", "09:00-09:30", "09:30-10:00",
         "10:00-10:30", "10:30-11:00", "11:00-11:30", "13:30-14:00",
-        "14:00-14:30", "14:30-15:00", "15:00-15:30", "15:30-16:00"
+        "14:00-14:30", "14:30-15:00", "15:00-15:30", "15:30-16:00",
+        "16:00-16:30"
     ];
 
     private static readonly int[] AnalyticsTrendPattern =
@@ -152,6 +155,7 @@ public static class ClinicDbInitializer
         EnsureVietnameseDemoDataText(db);
         EnsureAnalyticsDemoData(db);
         RefreshDemoTimeline(db);
+        RefreshFutureOperationalLoad(db);
         EnsureMedicalRecordsAndInvoices(db);
         RefreshDemoInvoices(db);
     }
@@ -928,6 +932,175 @@ public static class ClinicDbInitializer
         }
 
         db.SaveChanges();
+    }
+
+    private static void RefreshFutureOperationalLoad(ClinicDbContext db)
+    {
+        var today = SeedToday;
+        var patientIds = db.Patients
+            .OrderBy(x => x.PatientId)
+            .Select(x => x.PatientId)
+            .ToList();
+        if (patientIds.Count == 0)
+        {
+            return;
+        }
+
+        var doctorsByDepartment = db.Doctors
+            .Where(x => x.IsActive)
+            .OrderBy(x => x.DoctorId)
+            .AsEnumerable()
+            .GroupBy(x => x.DepartmentId)
+            .ToDictionary(x => x.Key, x => x.ToList());
+        if (doctorsByDepartment.Count == 0)
+        {
+            return;
+        }
+
+        var lockedAppointmentIds = db.MedicalRecords
+            .Select(x => x.AppointmentId)
+            .Concat(db.Invoices.Select(x => x.AppointmentId))
+            .ToHashSet();
+        var reusableAppointments = db.Appointments
+            .Where(x =>
+                x.Reason != null &&
+                x.Reason.StartsWith(FutureOperationalReasonPrefix) &&
+                !lockedAppointmentIds.Contains(x.AppointmentId))
+            .OrderBy(x => x.AppointmentId)
+            .ToList();
+        var occupiedSlots = db.Appointments
+            .AsEnumerable()
+            .Where(x =>
+                x.Status != AppointmentStatus.Cancelled &&
+                (x.Reason == null || !x.Reason.StartsWith(FutureOperationalReasonPrefix)))
+            .Select(x => $"{x.DoctorId}-{x.AppointmentDate.Date:yyyyMMdd}-{x.TimeSlot}")
+            .ToHashSet(StringComparer.Ordinal);
+
+        var desiredItems = new List<(int PatientId, int DoctorId, int DepartmentId, DateTime Date, string TimeSlot, string Reason)>();
+        var patientCursor = 0;
+
+        foreach (var department in db.Departments.Where(x => x.IsActive).OrderBy(x => x.DepartmentId).ToList())
+        {
+            if (!doctorsByDepartment.TryGetValue(department.DepartmentId, out var doctors) || doctors.Count == 0)
+            {
+                continue;
+            }
+
+            for (var dayIndex = 0; dayIndex < 7; dayIndex++)
+            {
+                var date = today.AddDays(dayIndex);
+                var capacity = doctors.Count * TimeSlots.Length;
+                var loadRatio = FutureLoadPattern[(dayIndex + department.DepartmentId) % FutureLoadPattern.Length];
+                var targetBusyCount = Math.Clamp((int)Math.Round(capacity * loadRatio), 1, Math.Max(1, capacity - 1));
+                var busyCount = 0;
+
+                foreach (var slot in TimeSlots)
+                {
+                    foreach (var doctor in doctors)
+                    {
+                        if (busyCount >= targetBusyCount)
+                        {
+                            break;
+                        }
+
+                        var key = $"{doctor.DoctorId}-{date:yyyyMMdd}-{slot}";
+                        if (occupiedSlots.Contains(key))
+                        {
+                            continue;
+                        }
+
+                        desiredItems.Add((
+                            patientIds[patientCursor % patientIds.Count],
+                            doctor.DoctorId,
+                            department.DepartmentId,
+                            date,
+                            slot,
+                            $"{FutureOperationalReasonPrefix} {date:dd/MM}"));
+                        occupiedSlots.Add(key);
+                        patientCursor++;
+                        busyCount++;
+                    }
+
+                    if (busyCount >= targetBusyCount)
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+
+        var changed = false;
+        for (var index = 0; index < desiredItems.Count; index++)
+        {
+            var item = desiredItems[index];
+            var appointment = index < reusableAppointments.Count
+                ? reusableAppointments[index]
+                : null;
+
+            if (appointment is null)
+            {
+                db.Appointments.Add(new Appointment
+                {
+                    PatientId = item.PatientId,
+                    DoctorId = item.DoctorId,
+                    DepartmentId = item.DepartmentId,
+                    AppointmentDate = item.Date,
+                    TimeSlot = item.TimeSlot,
+                    Reason = item.Reason,
+                    Status = AppointmentStatus.Scheduled,
+                    CreatedAt = item.Date.AddDays(-1).AddHours(8)
+                });
+                changed = true;
+                continue;
+            }
+
+            changed |= ApplyAppointmentTimeline(
+                appointment,
+                item.Date,
+                AppointmentStatus.Scheduled,
+                item.Date.AddDays(-1).AddHours(8),
+                item.Reason);
+
+            if (appointment.PatientId != item.PatientId)
+            {
+                appointment.PatientId = item.PatientId;
+                changed = true;
+            }
+
+            if (appointment.DoctorId != item.DoctorId)
+            {
+                appointment.DoctorId = item.DoctorId;
+                changed = true;
+            }
+
+            if (appointment.DepartmentId != item.DepartmentId)
+            {
+                appointment.DepartmentId = item.DepartmentId;
+                changed = true;
+            }
+
+            if (appointment.TimeSlot != item.TimeSlot)
+            {
+                appointment.TimeSlot = item.TimeSlot;
+                changed = true;
+            }
+        }
+
+        for (var index = desiredItems.Count; index < reusableAppointments.Count; index++)
+        {
+            var appointment = reusableAppointments[index];
+            changed |= ApplyAppointmentTimeline(
+                appointment,
+                today.AddDays(8 + index % 7),
+                AppointmentStatus.Cancelled,
+                today.AddDays(-1).AddHours(8),
+                $"{FutureOperationalReasonPrefix} đã hủy");
+        }
+
+        if (changed)
+        {
+            db.SaveChanges();
+        }
     }
 
     private static void RefreshDemoInvoices(ClinicDbContext db)

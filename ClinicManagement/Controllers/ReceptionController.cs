@@ -583,8 +583,9 @@ public class ReceptionController(ClinicStore store, AiSchedulingService ai) : Co
         bool patientSearchPerformed)
     {
         var normalizedStep = Math.Clamp(step, 1, 3);
-        var requestedDate = desiredDate?.Date ?? DateTime.Today;
-        var actualDate = requestedDate < DateTime.Today ? DateTime.Today : requestedDate;
+        var today = ClinicDate.Today;
+        var requestedDate = desiredDate?.Date ?? today;
+        var actualDate = requestedDate < today ? today : requestedDate;
         var departments = ai.SuggestDepartments(reason ?? string.Empty).ToList();
         var aiSuggestedDepartmentIds = ai.GetSuggestedDepartmentIds(reason ?? string.Empty);
         var selectedDepartmentId = departmentId;
@@ -642,7 +643,7 @@ public class ReceptionController(ClinicStore store, AiSchedulingService ai) : Co
             Departments = departments,
             Patients = patients,
             AvailabilityDays = normalizedStep >= 3 && selectedDepartmentId is not null
-                ? ai.GetAvailabilityDays(DateTime.Today, selectedDepartmentId.Value, actualDate, 7)
+                ? ai.GetAvailabilityDays(today, selectedDepartmentId.Value, actualDate, 7)
                 : [],
             SuggestedTimeSlots = timeSlots,
             AppointmentSuggestions = suggestions

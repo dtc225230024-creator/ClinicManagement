@@ -225,7 +225,7 @@
                            type="date"
                            class="form-control"
                            value="@Model.DesiredDate.ToString("yyyy-MM-dd")"
-                           min="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                           min="@ClinicManagement.Services.ClinicDate.Today.ToString("yyyy-MM-dd")" />
                 </label>
                 <button class="btn btn-outline-primary" name="command" value="refresh-step-3" type="submit">Cập nhật gợi ý</button>
             </div>

@@ -73,7 +73,7 @@ public class HomeController(ClinicStore store) : Controller
 
     private DashboardViewModel BuildAdminDashboard(IReadOnlyList<AppointmentListItem> appointments)
     {
-        var today = DateTime.Today;
+        var today = ClinicDate.Today;
         var waitingPaymentCount = CountWaitingPayments(appointments);
         var upcoming = appointments
             .Where(x => x.Appointment.Status == AppointmentStatus.Scheduled && x.Appointment.AppointmentDate.Date >= today)
@@ -112,7 +112,7 @@ public class HomeController(ClinicStore store) : Controller
 
     private DashboardViewModel BuildReceptionDashboard(IReadOnlyList<AppointmentListItem> appointments)
     {
-        var today = DateTime.Today;
+        var today = ClinicDate.Today;
         var waitingPaymentCount = CountWaitingPayments(appointments);
         var queue = appointments
             .Where(x => x.Appointment.Status != AppointmentStatus.Cancelled)
@@ -153,7 +153,7 @@ public class HomeController(ClinicStore store) : Controller
 
     private DashboardViewModel BuildDoctorDashboard(IReadOnlyList<AppointmentListItem> appointments, int doctorId)
     {
-        var today = DateTime.Today;
+        var today = ClinicDate.Today;
         var doctorAppointments = appointments
             .Where(x => x.Doctor.DoctorId == doctorId)
             .ToList();

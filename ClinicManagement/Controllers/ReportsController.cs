@@ -14,7 +14,7 @@ public class ReportsController(ClinicStore store) : Controller
         var normalizedPreset = string.IsNullOrWhiteSpace(rangePreset)
             ? "all"
             : rangePreset.Trim().ToLowerInvariant();
-        var presetRanges = BuildRangePresets(DateTime.Today);
+        var presetRanges = BuildRangePresets(ClinicDate.Today);
         var appointments = store.GetAppointmentItems().ToList();
         var normalizedFrom = fromDate?.Date;
         var normalizedTo = toDate?.Date;
