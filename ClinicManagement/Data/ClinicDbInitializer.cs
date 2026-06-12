@@ -13,6 +13,7 @@ public static class ClinicDbInitializer
     private const int TargetPatientCount = 100;
     private const int TargetAppointmentCount = 200;
     private const string TemporaryPassword = "Clinic@2026!";
+    private static DateTime SeedToday => DateTime.UtcNow.AddHours(7).Date;
     private const string AnalyticsDemoReasonPrefix = "Báo cáo demo";
 
     private static readonly (string Name, string Description)[] DepartmentSeeds =
@@ -152,6 +153,7 @@ public static class ClinicDbInitializer
         EnsureAnalyticsDemoData(db);
         RefreshDemoTimeline(db);
         EnsureMedicalRecordsAndInvoices(db);
+        RefreshDemoInvoices(db);
     }
 
     private static void EnsureDepartments(ClinicDbContext db)
@@ -421,7 +423,7 @@ public static class ClinicDbInitializer
             db.Patients.Add(new Patient
             {
                 FullName = BuildPersonName(index, null),
-                DateOfBirth = DateTime.Today.AddYears(-18 - (index % 45)).AddDays(-(index * 11 % 365)),
+                DateOfBirth = SeedToday.AddYears(-18 - (index % 45)).AddDays(-(index * 11 % 365)),
                 Gender = index % 2 == 0 ? "Nam" : "Nữ",
                 Phone = phone,
                 Address = Addresses[index % Addresses.Length],
@@ -451,7 +453,7 @@ public static class ClinicDbInitializer
 
         for (var offset = -10; offset <= 21; offset++)
         {
-            var workDate = DateTime.Today.AddDays(offset).Date;
+            var workDate = SeedToday.AddDays(offset).Date;
             foreach (var doctor in doctors)
             {
                 var key = $"{doctor.DoctorId}-{workDate:yyyyMMdd}";
@@ -497,7 +499,7 @@ public static class ClinicDbInitializer
         {
             var doctor = doctors[seedIndex % doctors.Count];
             var patientId = patientIds[(seedIndex * 3) % patientIds.Count];
-            var date = DateTime.Today.AddDays((seedIndex % 32) - 10).Date;
+            var date = SeedToday.AddDays((seedIndex % 32) - 10).Date;
             var timeSlot = TimeSlots[(seedIndex / doctors.Count) % TimeSlots.Length];
             var key = $"{doctor.DoctorId}-{date:yyyyMMdd}-{timeSlot}";
             if (existingKeys.Contains(key))
@@ -506,7 +508,7 @@ public static class ClinicDbInitializer
                 continue;
             }
 
-            var status = date < DateTime.Today
+            var status = date < SeedToday
                 ? seedIndex % 6 == 0 ? AppointmentStatus.Cancelled : AppointmentStatus.Completed
                 : seedIndex % 7 == 0 ? AppointmentStatus.Cancelled : AppointmentStatus.Scheduled;
 
@@ -565,7 +567,7 @@ public static class ClinicDbInitializer
         for (var index = 0; index < AnalyticsTrendPattern.Length; index++)
         {
             var targetCount = AnalyticsTrendPattern[index];
-            var date = DateTime.Today.AddDays(index - AnalyticsTrendPattern.Length).Date;
+            var date = SeedToday.AddDays(index - AnalyticsTrendPattern.Length).Date;
             var existingForDay = db.Appointments.Count(x =>
                 x.AppointmentDate.Date == date &&
                 x.Reason != null &&
@@ -612,7 +614,7 @@ public static class ClinicDbInitializer
 
     private static void RefreshDemoTimeline(ClinicDbContext db)
     {
-        var today = DateTime.Today;
+        var today = SeedToday;
         var changed = false;
         var recordAppointmentIds = db.MedicalRecords
             .Select(x => x.AppointmentId)
@@ -654,13 +656,18 @@ public static class ClinicDbInitializer
         for (var index = 0; index < demoAppointments.Count; index++)
         {
             var appointment = demoAppointments[index];
+            var cycle = index % 20;
             var hasCompletedData = appointmentsWithCompletedData.Contains(appointment.AppointmentId);
-            var targetDate = hasCompletedData
+            var shouldBeCompleted = hasCompletedData || cycle < 8;
+            var shouldBeCancelled = !shouldBeCompleted && cycle is >= 8 and < 11;
+            var targetDate = shouldBeCompleted
                 ? today.AddDays(-1 - index % 10).Date
-                : today.AddDays(index % 22).Date;
-            var targetStatus = hasCompletedData
+                : shouldBeCancelled
+                    ? today.AddDays((index % 17) - 8).Date
+                    : today.AddDays(index % 22).Date;
+            var targetStatus = shouldBeCompleted
                 ? AppointmentStatus.Completed
-                : index % 7 == 0
+                : shouldBeCancelled
                     ? AppointmentStatus.Cancelled
                     : AppointmentStatus.Scheduled;
             var targetCreatedAt = targetDate.AddDays(-1);
@@ -921,6 +928,59 @@ public static class ClinicDbInitializer
         }
 
         db.SaveChanges();
+    }
+
+    private static void RefreshDemoInvoices(ClinicDbContext db)
+    {
+        var completedAppointments = db.Appointments
+            .Where(x => x.Status == AppointmentStatus.Completed)
+            .OrderByDescending(x => x.AppointmentDate)
+            .ThenBy(x => x.TimeSlot)
+            .ThenBy(x => x.AppointmentId)
+            .ToList();
+        var invoices = db.Invoices.ToDictionary(x => x.AppointmentId);
+        var detailsByInvoiceId = db.InvoiceDetails
+            .AsEnumerable()
+            .GroupBy(x => x.InvoiceId)
+            .ToDictionary(x => x.Key, x => x.ToList());
+        var changed = false;
+
+        for (var index = 0; index < completedAppointments.Count; index++)
+        {
+            var appointment = completedAppointments[index];
+            if (!invoices.TryGetValue(appointment.AppointmentId, out var invoice))
+            {
+                continue;
+            }
+
+            var targetCreatedAt = appointment.AppointmentDate.AddHours(17);
+            if (invoice.CreatedAt != targetCreatedAt)
+            {
+                invoice.CreatedAt = targetCreatedAt;
+                changed = true;
+            }
+
+            var targetStatus = index % 4 == 0 ? PaymentStatus.Unpaid : PaymentStatus.Paid;
+            if (invoice.PaymentStatus != targetStatus)
+            {
+                invoice.PaymentStatus = targetStatus;
+                changed = true;
+            }
+
+            var targetTotal = detailsByInvoiceId.TryGetValue(invoice.InvoiceId, out var details)
+                ? details.Sum(x => x.LineTotal)
+                : invoice.TotalAmount;
+            if (invoice.TotalAmount != targetTotal)
+            {
+                invoice.TotalAmount = targetTotal;
+                changed = true;
+            }
+        }
+
+        if (changed)
+        {
+            db.SaveChanges();
+        }
     }
 
     private static void EnsureDemoDisplayNames(ClinicDbContext db)
